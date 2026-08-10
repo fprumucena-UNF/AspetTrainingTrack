@@ -29,9 +29,18 @@ st.markdown(
     .block-container {{
         padding-top: 3rem !important;
         padding-bottom: 1.2rem !important;
-        padding-left: 1.8rem !important;
-        padding-right: 1.8rem !important;
+        padding-left: 1.2rem !important;
+        padding-right: 1.2rem !important;
         max-width: 100% !important;
+    }}
+    /* Let column rows wrap onto a new line on narrower (laptop) screens instead
+       of squeezing everything into one row that never adapts */
+    [data-testid="stHorizontalBlock"] {{
+        flex-wrap: wrap !important;
+    }}
+    [data-testid="stHorizontalBlock"] > div {{
+        min-width: 160px !important;
+        flex: 1 1 160px !important;
     }}
     /* Card style for bordered containers (PowerBI tile look) */
     [data-testid="stVerticalBlockBorderWrapper"] {{
@@ -560,27 +569,25 @@ def render_platform_tab(platform):
     st.subheader(f"{platform} — {PLATFORM_WEIGHTS[platform]}% of overall track")
     st.progress(prog / 100, text=f"{prog}% complete")
 
-    hcols = st.columns([4, 0.8, 0.9, 1.4, 1.1, 1.1])
-    headers = ["Item", "Weight", "Priority", "Status", "Start date", "End date"]
-    for hc, h in zip(hcols, headers):
-        hc.markdown(f"<span class='col-header'>{h}</span>", unsafe_allow_html=True)
-
     for i in items:
         with st.container(border=True):
-            cols = st.columns([4, 0.8, 0.9, 1.4, 1.1, 1.1])
-            with cols[0]:
-                st.markdown(f"<div class='item-name'>{i['id']}. {i['name']}</div>", unsafe_allow_html=True)
-                st.caption(i["note"])
-            with cols[1]:
+            st.markdown(f"<div class='item-name'>{i['id']}. {i['name']}</div>", unsafe_allow_html=True)
+            st.caption(i["note"])
+
+            ccols = st.columns([1, 1.1, 1.8, 1.3, 1.3])
+            with ccols[0]:
+                st.markdown("<span class='col-header'>Weight</span>", unsafe_allow_html=True)
                 st.markdown(f"<span class='item-weight'>{i['weight']}%</span>", unsafe_allow_html=True)
-            with cols[2]:
+            with ccols[1]:
+                st.markdown("<span class='col-header'>Priority</span>", unsafe_allow_html=True)
                 color = PRIORITY_COLOR.get(i["priority"], "#999")
                 st.markdown(
                     f"<span class='priority-badge' style='background-color:{color}22;color:{color};'>"
                     f"{i['priority']}</span>",
                     unsafe_allow_html=True,
                 )
-            with cols[3]:
+            with ccols[2]:
+                st.markdown("<span class='col-header'>Status</span>", unsafe_allow_html=True)
                 current = get_status(platform, i["id"])
                 new_status = st.selectbox(
                     "Status", STATUS_OPTIONS, index=STATUS_OPTIONS.index(current),
@@ -589,7 +596,8 @@ def render_platform_tab(platform):
                 if new_status != current:
                     set_status(platform, i["id"], new_status)
                     st.rerun()
-            with cols[4]:
+            with ccols[3]:
+                st.markdown("<span class='col-header'>Start date</span>", unsafe_allow_html=True)
                 cur_start = get_item_date(platform, i["id"], "start")
                 new_start = st.date_input(
                     "Start", value=cur_start, key=f"start_{platform}_{i['id']}",
@@ -597,7 +605,8 @@ def render_platform_tab(platform):
                 )
                 if new_start != cur_start:
                     set_item_date(platform, i["id"], "start", new_start)
-            with cols[5]:
+            with ccols[4]:
+                st.markdown("<span class='col-header'>End date</span>", unsafe_allow_html=True)
                 cur_end = get_item_date(platform, i["id"], "end")
                 new_end = st.date_input(
                     "End", value=cur_end, key=f"end_{platform}_{i['id']}",
