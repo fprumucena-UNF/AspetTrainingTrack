@@ -1,11 +1,116 @@
+
+/
+Claude finished the response
+
+Validated diagram components against documented architecture
+Validated diagram components against documented architecture
+Sim, é a mesma arquitetura — mesmos componentes, mesmas conexões. Comparando ponto a ponto:
+
+No diagrama	No texto
+UIP core → CenterCord, CC2DCP, CTI server, DB servers	Seção 3 (tabela de servidores) e Caso 1 (história da ligação)
+ALM como bloco separado	Seção 1 e Caso 2 (fluxo outbound)
+AQM → AQM server + IMON	Seção 3 (linha do IMON) e Seção 5 (tabela de conexões)
+MDC → IMON (TLS + Register)	Seção 5, linha 2 da tabela — inclusive já linkei explicitamente com o seu caso ativo do ccs59crds
+A diferença é só de propósito, não de conteúdo: o diagrama mostra a topologia (quem se conecta com quem, estático). O texto adiciona a sequência temporal — a ordem em que isso acontece numa ligação real (UIP decide → ALM alimenta → AQM grava), que o diagrama de topologia não expressa porque não é um flowchart.
+
+Se quiser, posso adicionar as duas imagens dos diagramas dentro do próprio .md/Word como figuras, pra ficar tudo num material só ao invés de duas peças separadas.
+
+can you translate into engish
+
+
+Created a file, read a file
+Created a file, read a file
+Same content, same structure, fully translated. Let me know if you'd rather have this as a .docx for distribution instead of markdown.
+
+
+Uip alm aqm architecture training
+Document · MD 
+legal agora faz um outro, em ingles tambem, mas dessa vez 
+
+foca nas base de dados ...todos uip, alm, aqm
+na questao de redundancia delas
+nos servicos principais deleas ... change notification, dbi ..etc.. e como eles funcionam e interagem
+
+
+Synthesized database architectures, redundancy patterns, and service interactions comprehensively
+Synthesized database architectures, redundancy patterns, and service interactions comprehensively
+Structure: databases per system (UIP Datamart, ALM's meldb/probability/workarea, AQM's own SQL DBs) → redundancy model for each → the services that actually make redundancy work (DBI, Change Notification Service, Alert Server, Import/Export) and exactly how they interact → a cross-system comparison table → a closing section on the dependency chain (database → DBI → Alert Server/Change Notification Service) so you can see why "the database failed over" and "every component knows it failed over" are two separate things to verify.
+
+A few notes worth flagging directly:
+
+DBI's Active/Active + internal "primary" tracking and Change Notification's quorum-based (best-2-of-3) model are genuinely different mechanisms, even though both sit near the database layer — I kept them clearly separate rather than lumping them under one "redundancy" umbrella.
+Section 4.3 connects this to your ccs59crds case, but only to note that IMON's process-level redundancy isn't implicated by what's documented in the ticket — I didn't extend that into any root-cause claim.
+AQM's database redundancy mechanism isn't spelled out as a single named pattern in the source guides the way UIP's AlwaysOn or ALM's Windows Clustering are — I flagged that gap explicitly in the comparison table instead of guessing at a mechanism.
+
+Uip alm aqm databases redundancy services
+Document · MD 
+na pratica o que eh a AOD interface ?
+
+
+Desvendou arquitetura técnica de conexão e processamento de dados
+Desvendou arquitetura técnica de conexão e processamento de dados
+Na prática, a AOD interface é uma conexão de socket persistente entre o CenterCord e o ALM, pela qual eles trocam registros de discagem e disposições. Não é um "serviço" separado com nome próprio — é o canal de comunicação em si, tratado nos logs como uma conexão de "AOD Feed Client".
+
+Como funciona, ciclo a ciclo:
+
+CenterCord pede registros pra discar ("no records received in response to previous AOD Feed request").
+ALM manda os registros pelo socket.
+CenterCord disca e, quando a chamada termina, gera uma disposição (resultado da ligação).
+A disposição volta pro ALM pelo mesmo socket, pra ele atualizar a lista.
+Controle de fluxo (isso é o que mais aparece em troubleshooting):
+
+CenterCord monitora quantas disposições estão pendentes de confirmação (unacknowledged dispositions) por cliente AOD Feed.
+Se ultrapassa o High Watermark, CenterCord suspende o envio de novos registros pra esse cliente até o ALM processar o acumulado.
+Quando cai abaixo do Low Watermark, CenterCord retoma o feed automaticamente.
+Também existe uma fila (AOD Feed Queue) que pode ficar cheia (AOD FEED Queue is FULL), rejeitando novos registros.
+Segurança (opcional):
+
+Pode rodar em texto puro ou em TLS.
+Se for TLS, a autenticação é por certificado do CenterCord — o thumbprint do cert fica configurado no CenterCord.exe.config (<CenterCordCertificate>), assinado pela CA raiz do cliente, e o ALM precisa confiar nessa CA pra aceitar a conexão.
+Onde isso quebra, na prática:
+
+Socket cai por timeout → Closing Socket with AOD Feed Application due to socket timeout.
+CenterCord sem memória → não aceita novos registros do ALM.
+Fila de disposição não confirmada estoura → CenterCord pausa o feed sozinho (comportamento esperado, não é bug).
+Resumindo: é literalmente o "cano" pelo qual passam pedido de registro → registro → disposição, entre os dois sistemas — com watermarks fazendo o papel de controle de pressão pra um lado não afogar o outro.
+
+1786448211126_image.png
+
+import streamlit as st import json import os from datetime import datetime, date import plotly.graph_objects as go st.set_page_config(page_title="UIP · ALM · AQM Training Track", layout="wide") # --------------------------------------------------------------------------- # BMO brand palet
+
+pasted
+
+sabe esses valores percentuais entre parenteses na parte de cima do gauge? acho confuso, queria tirar do grafico.
+
+
+Avaliou solicitação para remover elementos visuais do gráfico
+Avaliou solicitação para remover elementos visuais do gráfico
+Agora vou tirar o (35%), (35%), (30%) e (25%), (45%), (30%) dos títulos dos dois grupos de gauges (Progress by platform e Progress by phase):
+
+
+Edited 2 files, read a file
+Edited 2 files, read a file
+Pronto — os gauges de "Progress by platform" e "Progress by phase" agora mostram só o nome (UIP, ALM, AQM / Foundation, Deep dive, Application), sem o (35%) etc. no título. O peso continua visível nos KPI tiles e nas tabs de cada plataforma, só saiu da parte confusa do gauge.
+
+
+Training track
+PY 
+
+
+
+
+
+
+Claude is AI and can make mistakes. Please double-check responses.
+Training track · PY
 import streamlit as st
 import json
 import os
 from datetime import datetime, date
 import plotly.graph_objects as go
-
+ 
 st.set_page_config(page_title="UIP · ALM · AQM Training Track", layout="wide")
-
+ 
 # ---------------------------------------------------------------------------
 # BMO brand palette (official): Blue #0079C1 · Red #ED1C24 · White #FFFFFF
 # ---------------------------------------------------------------------------
@@ -16,7 +121,7 @@ BMO_RED_DEEP = "#A8171D"
 BMO_LIGHT_BLUE = "#66B2E0"
 BMO_GRAY = "#6C757D"
 BMO_GRAY_DEEP = "#4A4F54"
-
+ 
 st.markdown(
     f"""
     <style>
@@ -191,16 +296,16 @@ st.markdown(
     """,
     unsafe_allow_html=True,
 )
-
+ 
 PROGRESS_FILE = "progress.json"
 GENERAL_START_DEFAULT = date(2026, 8, 1)
-
+ 
 # ---------------------------------------------------------------------------
 # Data model — sourced directly from Training_Track_UIP_ALM_AQM.docx
 # ---------------------------------------------------------------------------
-
+ 
 PLATFORM_WEIGHTS = {"UIP": 35, "ALM": 35, "AQM": 30}
-
+ 
 PLATFORM_ITEMS = {
     "UIP": [
         {"id": 1, "name": "General architecture (Core Server, CenterCord, CC2DCP, Alert Server, Import/Export, DBI)",
@@ -257,7 +362,7 @@ PLATFORM_ITEMS = {
          "weight": 10, "priority": "Medium", "note": "Relevant for compliance in a banking environment"},
     ],
 }
-
+ 
 PHASES = [
     {"name": "Phase 1 — Foundation", "weight": 25,
      "deliverable": "Consolidated architecture diagram",
@@ -271,20 +376,20 @@ PHASES = [
      "checklist": ["PRB0068431 (HA / storage-SAN)", "URM 01607749 (certificates)",
                    "MDC/IMON active troubleshooting", "ccs59crds/ccs78crds (Edit User mapping)"]},
 ]
-
+ 
 STATUS_OPTIONS = ["Not started", "In progress", "Done"]
 STATUS_VALUE = {"Not started": 0, "In progress": 50, "Done": 100}
 PRIORITY_COLOR = {"Base": BMO_GRAY, "High": BMO_RED, "Medium": BMO_BLUE, "Low": BMO_LIGHT_BLUE}
-
+ 
 ENTRY_TYPES = ["General", "INC", "PRB", "Task"]
 TYPE_COLOR = {"General": BMO_GRAY, "INC": BMO_RED, "PRB": "#D68910", "Task": BMO_BLUE}
 TAG_OPTIONS = ["UIP", "ALM", "AQM", "Dev", "QA", "PRO"]
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # Persistence
 # ---------------------------------------------------------------------------
-
+ 
 def load_progress():
     if os.path.exists(PROGRESS_FILE):
         try:
@@ -293,50 +398,50 @@ def load_progress():
         except Exception:
             pass
     return {}
-
-
+ 
+ 
 def save_progress(data):
     try:
         with open(PROGRESS_FILE, "w") as f:
             json.dump(data, f)
     except Exception as e:
         st.error(f"Could not save progress: {e}")
-
-
+ 
+ 
 if "progress" not in st.session_state:
     st.session_state.progress = load_progress()
-
-
+ 
+ 
 def item_key(platform, item_id):
     return f"{platform}:{item_id}"
-
-
+ 
+ 
 def get_status(platform, item_id):
     return st.session_state.progress.get(item_key(platform, item_id), "Not started")
-
-
+ 
+ 
 def set_status(platform, item_id, status):
     st.session_state.progress[item_key(platform, item_id)] = status
     save_progress(st.session_state.progress)
-
-
+ 
+ 
 def checklist_key(phase_name, label):
     return f"phase::{phase_name}::{label}"
-
-
+ 
+ 
 def get_check(phase_name, label):
     return st.session_state.progress.get(checklist_key(phase_name, label), False)
-
-
+ 
+ 
 def set_check(phase_name, label, value):
     st.session_state.progress[checklist_key(phase_name, label)] = value
     save_progress(st.session_state.progress)
-
-
+ 
+ 
 def date_key(platform, item_id, which):
     return f"date:{platform}:{item_id}:{which}"
-
-
+ 
+ 
 def get_item_date(platform, item_id, which):
     raw = st.session_state.progress.get(date_key(platform, item_id, which))
     if raw:
@@ -345,8 +450,8 @@ def get_item_date(platform, item_id, which):
         except Exception:
             return None
     return None
-
-
+ 
+ 
 def set_item_date(platform, item_id, which, value):
     key = date_key(platform, item_id, which)
     if value is None:
@@ -354,8 +459,8 @@ def set_item_date(platform, item_id, which, value):
     else:
         st.session_state.progress[key] = value.isoformat()
     save_progress(st.session_state.progress)
-
-
+ 
+ 
 def get_general_start():
     raw = st.session_state.progress.get("general_start")
     if raw:
@@ -364,21 +469,21 @@ def get_general_start():
         except Exception:
             pass
     return GENERAL_START_DEFAULT
-
-
+ 
+ 
 def set_general_start(value):
     st.session_state.progress["general_start"] = value.isoformat()
     save_progress(st.session_state.progress)
-
-
+ 
+ 
 def notes_key(item_key):
     return f"notes:{item_key}"
-
-
+ 
+ 
 def get_notes(item_key):
     return st.session_state.progress.get(notes_key(item_key), [])
-
-
+ 
+ 
 def add_note(item_key, note_date, text, note_type="General", tags=None):
     notes = get_notes(item_key)
     notes.append({
@@ -389,24 +494,24 @@ def add_note(item_key, note_date, text, note_type="General", tags=None):
     })
     st.session_state.progress[notes_key(item_key)] = notes
     save_progress(st.session_state.progress)
-
-
+ 
+ 
 def delete_note(item_key, idx):
     notes = get_notes(item_key)
     if 0 <= idx < len(notes):
         notes.pop(idx)
         st.session_state.progress[notes_key(item_key)] = notes
         save_progress(st.session_state.progress)
-
-
+ 
+ 
 def all_items_done():
     for platform, items in PLATFORM_ITEMS.items():
         for i in items:
             if get_status(platform, i["id"]) != "Done":
                 return False
     return True
-
-
+ 
+ 
 def general_end_date():
     """Latest end date across all items — only meaningful once all items are Done."""
     end_dates = []
@@ -416,26 +521,26 @@ def general_end_date():
             if d:
                 end_dates.append(d)
     return max(end_dates) if end_dates else None
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # Calculations
 # ---------------------------------------------------------------------------
-
+ 
 def platform_progress(platform):
     items = PLATFORM_ITEMS[platform]
     total_weight = sum(i["weight"] for i in items)
     earned = sum(i["weight"] * STATUS_VALUE[get_status(platform, i["id"])] / 100 for i in items)
     return round(earned / total_weight * 100, 1) if total_weight else 0.0
-
-
+ 
+ 
 def overall_progress():
     total = 0.0
     for platform, w in PLATFORM_WEIGHTS.items():
         total += platform_progress(platform) * w / 100
     return round(total, 1)
-
-
+ 
+ 
 def high_weight_items():
     """Items weighted 15-20% across all platforms → Phase 2 dedicated sessions."""
     result = []
@@ -444,8 +549,8 @@ def high_weight_items():
             if i["weight"] >= 15:
                 result.append((platform, i))
     return result
-
-
+ 
+ 
 def phase_progress(phase):
     if phase["name"] == "Phase 2 — Deep dive":
         items = high_weight_items()
@@ -460,15 +565,15 @@ def phase_progress(phase):
             return 0.0
         done = sum(1 for c in checks if get_check(phase["name"], c))
         return round(done / len(checks) * 100, 1)
-
-
+ 
+ 
 def overall_track_progress():
     total = 0.0
     for phase in PHASES:
         total += phase_progress(phase) * phase["weight"] / 100
     return round(total, 1)
-
-
+ 
+ 
 def render_notes_section(item_key, form_prefix):
     notes = get_notes(item_key)
     if notes:
@@ -499,7 +604,7 @@ def render_notes_section(item_key, form_prefix):
                 st.write(n.get("text", ""))
     else:
         st.caption("No experience or case notes logged yet.")
-
+ 
     with st.form(key=f"form_{form_prefix}", clear_on_submit=True):
         fcols = st.columns([1, 1, 3, 1.5])
         with fcols[0]:
@@ -522,8 +627,8 @@ def render_notes_section(item_key, form_prefix):
         if submitted and note_text.strip():
             add_note(item_key, note_date, note_text.strip(), note_type, note_tags)
             st.rerun()
-
-
+ 
+ 
 def kpi_tile(label, value, bg_color, text_color="#FFFFFF"):
     return f"""
     <div style='background-color:{bg_color};padding:1.1rem 1.3rem;
@@ -533,8 +638,8 @@ def kpi_tile(label, value, bg_color, text_color="#FFFFFF"):
         <div style='color:{text_color};font-size:2.1rem;font-weight:800;margin-top:0.3rem;'>{value}</div>
     </div>
     """
-
-
+ 
+ 
 def make_gauge(value, title, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK):
     fig = go.Figure(go.Indicator(
         mode="gauge+number",
@@ -557,23 +662,23 @@ def make_gauge(value, title, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK):
         font={"family": "Segoe UI, sans-serif"},
     )
     return fig
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # UI helpers
 # ---------------------------------------------------------------------------
-
+ 
 def render_platform_tab(platform):
     items = PLATFORM_ITEMS[platform]
     prog = platform_progress(platform)
     st.subheader(f"{platform} — {PLATFORM_WEIGHTS[platform]}% of overall track")
     st.progress(prog / 100, text=f"{prog}% complete")
-
+ 
     for i in items:
         with st.container(border=True):
             st.markdown(f"<div class='item-name'>{i['id']}. {i['name']}</div>", unsafe_allow_html=True)
             st.caption(i["note"])
-
+ 
             ccols = st.columns([1, 1.1, 1.8, 1.3, 1.3])
             with ccols[0]:
                 st.markdown("<span class='col-header'>Weight</span>", unsafe_allow_html=True)
@@ -614,23 +719,23 @@ def render_platform_tab(platform):
                 )
                 if new_end != cur_end:
                     set_item_date(platform, i["id"], "end", new_end)
-
-
+ 
+ 
 # ---------------------------------------------------------------------------
 # Layout
 # ---------------------------------------------------------------------------
-
+ 
 st.title("UIP · ALM · AQM — Training Track Dashboard")
 st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio — Technical Support")
-
+ 
 tab_overview, tab_uip, tab_alm, tab_aqm, tab_phases = st.tabs(
     ["Overview", "UIP", "ALM", "AQM", "Phases & Cases"]
 )
-
+ 
 with tab_overview:
     overall = overall_progress()
     track = overall_track_progress()
-
+ 
     with st.container(border=True):
         gcol1, gcol2, gcol3 = st.columns([1, 1, 2])
         with gcol1:
@@ -659,7 +764,7 @@ with tab_overview:
                 "General end auto-fills with the latest item end date once every "
                 "item across UIP / ALM / AQM is marked Done."
             )
-
+ 
     k1, k2, k3, k4 = st.columns(4)
     with k1:
         st.markdown(kpi_tile("Overall (platform weight)", f"{overall}%", BMO_BLUE_DARK), unsafe_allow_html=True)
@@ -672,7 +777,7 @@ with tab_overview:
             kpi_tile("ALM / AQM", f"{platform_progress('ALM')}% / {platform_progress('AQM')}%", BMO_GRAY_DEEP),
             unsafe_allow_html=True,
         )
-
+ 
     pcol, phcol = st.columns(2)
     with pcol, st.container(border=True):
         st.markdown("<div class='progress-card-marker'></div>", unsafe_allow_html=True)
@@ -682,7 +787,7 @@ with tab_overview:
             p = platform_progress(platform)
             with gc:
                 st.plotly_chart(
-                    make_gauge(p, f"{platform} ({w}%)", bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK),
+                    make_gauge(p, platform, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK),
                     use_container_width=True,
                     config={"displayModeBar": False},
                     key=f"gauge_platform_{platform}",
@@ -696,12 +801,12 @@ with tab_overview:
             short_name = phase["name"].split("—")[-1].strip()
             with gc:
                 st.plotly_chart(
-                    make_gauge(p, f"{short_name} ({phase['weight']}%)", bar_color="#FFFFFF", bg_color=BMO_RED_DEEP),
+                    make_gauge(p, short_name, bar_color="#FFFFFF", bg_color=BMO_RED_DEEP),
                     use_container_width=True,
                     config={"displayModeBar": False},
                     key=f"gauge_phase_{phase['name']}",
                 )
-
+ 
     st.markdown(
         f"""
         <div style='background-color:{BMO_BLUE_DARK};padding:1.2rem 1.5rem;
@@ -718,16 +823,16 @@ with tab_overview:
         """,
         unsafe_allow_html=True,
     )
-
+ 
 with tab_uip:
     render_platform_tab("UIP")
-
+ 
 with tab_alm:
     render_platform_tab("ALM")
-
+ 
 with tab_aqm:
     render_platform_tab("AQM")
-
+ 
 with tab_phases:
     with st.container(border=True):
         st.markdown("#### Phase 1 — Foundation (25%)")
@@ -741,7 +846,7 @@ with tab_phases:
                     set_check(PHASES[0]["name"], c, val)
                 st.markdown("---")
                 render_notes_section(note_ref, f"p1_{abs(hash(c))}")
-
+ 
     with st.container(border=True):
         st.markdown("#### Phase 2 — Deep dive (45%)")
         st.caption("Deliverable: Technical notes + DEV/QA testing — one session per 15-20% item")
@@ -754,7 +859,7 @@ with tab_phases:
                 render_notes_section(note_ref, f"p2_{platform}_{i['id']}")
         p2 = phase_progress(PHASES[1])
         st.progress(p2 / 100, text=f"{p2}%")
-
+ 
     with st.container(border=True):
         st.markdown("#### Phase 3 — Application (30%)")
         st.caption("Deliverable: Living documentation updated — active cases as real practice")
@@ -767,6 +872,15 @@ with tab_phases:
                     set_check(PHASES[2]["name"], c, val)
                 st.markdown("---")
                 render_notes_section(note_ref, f"p3_{abs(hash(c))}")
-
+ 
 st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
 st.caption(f"Last saved: {datetime.now().strftime('%Y-%m-%d %H:%M')} · Progress stored in {PROGRESS_FILE}")
+ 
+
+
+
+
+
+
+
+
