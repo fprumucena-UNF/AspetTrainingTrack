@@ -1,6 +1,6 @@
 # Local progress data (personal, don't commit) — uncomment if you don't want it on GitHub
 progress.json
-
+# alimenta o progress.json
 # Python
 __pycache__/
 *.pyc
