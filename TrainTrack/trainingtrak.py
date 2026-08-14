@@ -225,6 +225,14 @@ st.markdown(
         color: {BMO_BLUE_DARK} !important;
         margin: 0 0 0.3rem 0 !important;
     }}
+    /* Logbook row count next to the "Logbook" title — deliberately lighter
+       weight than the title itself so it reads as a caption-like annotation,
+       not a second heading competing for attention. */
+    .logbook-count {{
+        font-size: 0.85rem !important;
+        font-weight: 400 !important;
+        color: {BMO_GRAY} !important;
+    }}
     /* Section-header badge — same visual language as the tab labels above
        (solid BMO navy pill, bold white text) so section titles like
        "Progress" read as a matching part of the same design system. */
@@ -844,7 +852,9 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Backup")
     st.caption(
-        "Progress Backup: Download from app"
+        "Progress lives on this app's own server disk, not in GitHub. Download a "
+        "copy here before pushing new code or redeploying — a redeploy resets this "
+        "app's disk to whatever is currently committed in the repo."
     )
     st.download_button(
         "Download progress.json",
@@ -955,9 +965,21 @@ with tab_logbook:
         if "logbook_textarea" not in st.session_state:
             st.session_state["logbook_textarea"] = current_text
 
+        # Counts dated entries (lines starting with [YYYY-MM-DD]), the same
+        # ones the sort buttons recognize — so this number always matches
+        # what "Oldest first" / "Newest first" would actually reorder, not
+        # just a raw line count that could include blank lines or freeform
+        # notes without a date.
+        logged_count = sum(1 for line in current_text.split("\n") if LOGBOOK_DATE_RE.match(line))
+        row_word = "row" if logged_count == 1 else "rows"
+
         top = st.columns([3, 1, 1.3])
         with top[0]:
-            st.markdown("<div class='progress-title'>Logbook</div>", unsafe_allow_html=True)
+            st.markdown(
+                f"<div class='progress-title'>Logbook "
+                f"<span class='logbook-count'>[{logged_count} {row_word} logged]</span></div>",
+                unsafe_allow_html=True,
+            )
         with top[1]:
             last_updated = get_logbook_updated()
             if last_updated:
