@@ -96,22 +96,16 @@ st.markdown(
     }}
     /* Item labels — compact */
     .item-name {{
-        font-size: 1.1rem !important;
+        font-size: 1.05rem !important;
         font-weight: 600 !important;
         line-height: 1.3 !important;
         color: {BMO_BLUE_DARK} !important;
-        margin: 0 0 0.4rem 0 !important;
+        margin: 0 0 0.15rem 0 !important;
     }}
     .item-weight {{
-        font-size: 1.1rem !important;
+        font-size: 0.95rem !important;
         font-weight: 700 !important;
         color: {BMO_BLUE} !important;
-    }}
-    .priority-badge {{
-        font-size: 0.85rem !important;
-        padding: 3px 11px !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
     }}
     .status-badge {{
         font-size: 0.85rem !important;
@@ -138,7 +132,7 @@ st.markdown(
     h1 {{ font-size: 1.7rem !important; color: {BMO_BLUE_DARK} !important; margin-bottom: 0.3rem !important; }}
     h3 {{ font-size: 1.2rem !important; margin: 0.25rem 0 !important; color: {BMO_BLUE_DARK} !important; }}
     h4 {{ font-size: 1.05rem !important; margin: 0.25rem 0 !important; color: {BMO_BLUE_DARK} !important; }}
-    [data-testid="stCaptionContainer"] {{ font-size: 0.88rem !important; margin: 0.15rem 0 0 0 !important; }}
+    [data-testid="stCaptionContainer"] {{ font-size: 0.85rem !important; margin: 0.1rem 0 0 0 !important; color: {BMO_GRAY} !important; }}
     /* Metrics — PowerBI KPI tile look */
     [data-testid="stMetric"] {{ padding: 0.25rem 0 !important; }}
     [data-testid="stMetricValue"] {{ font-size: 1.9rem !important; color: {BMO_BLUE_DARK} !important; }}
@@ -150,8 +144,9 @@ st.markdown(
     .stProgress {{ margin: 0.15rem 0 !important; }}
     .stProgress > div > div {{ height: 9px !important; }}
     .stProgress > div > div > div > div {{ background-color: {BMO_BLUE} !important; }}
-    /* Checkbox text */
-    .stCheckbox label p {{ font-size: 1rem !important; }}
+    /* Compact status slider (fillable "not started / in progress / done" bar) */
+    .stSlider {{ padding-top: 0.1rem !important; margin-bottom: 0.2rem !important; }}
+    .stSlider label {{ font-size: 0.8rem !important; }}
     /* Progress-by cards — solid BMO-tinted background with accent border */
     [data-testid="stVerticalBlockBorderWrapper"]:has(.progress-card-marker) {{
         background-color: #EAF4FB !important;
@@ -159,10 +154,10 @@ st.markdown(
         border-left: 5px solid {BMO_BLUE} !important;
     }}
     .progress-title {{
-        font-size: 1.15rem !important;
+        font-size: 1.1rem !important;
         font-weight: 700 !important;
         color: {BMO_BLUE_DARK} !important;
-        margin: 0 0 0.5rem 0 !important;
+        margin: 0 0 0.3rem 0 !important;
     }}
     .progress-label {{
         font-size: 0.95rem !important;
@@ -174,16 +169,15 @@ st.markdown(
         font-weight: 700 !important;
         color: {BMO_BLUE_DARK} !important;
     }}
-    /* Journal entry tag badges */
-    .tag-badge {{
-        font-size: 0.72rem !important;
-        font-weight: 600 !important;
-        padding: 2px 9px !important;
-        border-radius: 8px !important;
-        background-color: {BMO_LIGHT_BLUE}33 !important;
-        color: {BMO_BLUE_DARK} !important;
-        margin-right: 4px !important;
-        display: inline-block;
+    /* Logbook notepad — plain white writing area */
+    .stTextArea textarea {{
+        background-color: #FFFFFF !important;
+        color: #1A1A1A !important;
+        font-size: 1.02rem !important;
+        line-height: 1.7 !important;
+        padding: 1rem !important;
+        border: 1px solid #E1DFDD !important;
+        border-radius: 6px !important;
     }}
     /* Ensure text stays dark/readable regardless of OS dark-mode preference */
     body, p, span, div, label {{ color: #1A1A1A; }}
@@ -196,89 +190,217 @@ PROGRESS_FILE = "progress.json"
 GENERAL_START_DEFAULT = date(2026, 8, 1)
 
 # ---------------------------------------------------------------------------
-# Data model — sourced directly from Training_Track_UIP_ALM_AQM.docx
+# Data model — training curriculum: 3 products × 4 tracks
+#
+# Each item: id (unique within the platform), track, a *compact* name,
+# a short desc (shown smaller/lighter under the name), and hours.
+# There is no manual "weight" to keep in sync anymore — progress is
+# weighted by `hours` automatically, so nothing can drift out of 100%.
 # ---------------------------------------------------------------------------
 
-PLATFORM_WEIGHTS = {"UIP": 35, "ALM": 35, "AQM": 30}
+TRACKS = ["User", "Supervisor", "Administrator", "Support Engineer"]
 
 PLATFORM_ITEMS = {
     "UIP": [
-        {"id": 1, "name": "General architecture (Core Server, CenterCord, CC2DCP, Alert Server, Import/Export, DBI)",
-         "weight": 10, "priority": "Base", "note": "Review — you already know most of this"},
-        {"id": 2, "name": "HA per component (independent failover, quorum vs. AlwaysOn+FSW)",
-         "weight": 15, "priority": "High", "note": "Reinforce with the PRB0068431 case"},
-        {"id": 3, "name": "LDAP / Integrated Authentication (Windows Logon + Domain)",
-         "weight": 10, "priority": "Medium", "note": "Recurring in login troubleshooting"},
-        {"id": 4, "name": "Certificate management (LDAP/AD root, Tomcat Portal, UCCAdmin)",
-         "weight": 15, "priority": "High", "note": "Tied to the URM case 01607749"},
-        {"id": 5, "name": "M3 (IVR scripting) — script / service / server",
-         "weight": 20, "priority": "High", "note": "New area — highest time investment"},
-        {"id": 6, "name": "Unified Director / UCCAdmin (Adapter, Server, Enterprise DB)",
-         "weight": 15, "priority": "Medium", "note": "Central multi-site administration"},
-        {"id": 7, "name": "Enterprise deployment rules (upgrade, backup/recovery, add/remove sites)",
-         "weight": 10, "priority": "Medium", "note": "Relevant for CAB / change control"},
-        {"id": 8, "name": "Alerts and severities (Alert Server, message catalog)",
-         "weight": 5, "priority": "Low", "note": "Quick reference, not deep study"},
+        # User — 7h
+        {"id": 1, "track": "User", "name": "Agent Interface",
+         "desc": "Login, status, transfer and conference calls", "hours": 2},
+        {"id": 2, "track": "User", "name": "Multichannel Support",
+         "desc": "Voice, chat and callback in a single interaction flow", "hours": 3},
+        {"id": 3, "track": "User", "name": "Unified Director",
+         "desc": "Day-to-day use of the agent softphone", "hours": 2},
+        # Supervisor — 8h
+        {"id": 4, "track": "Supervisor", "name": "URM Dashboard",
+         "desc": "Real-time panel — queues, agents and SLAs", "hours": 3},
+        {"id": 5, "track": "Supervisor", "name": "Team Management",
+         "desc": "Escalation, barge-in/whisper and operational reports", "hours": 3},
+        {"id": 6, "track": "Supervisor", "name": "Quick UCC-Admin",
+         "desc": "Quick adjustments to routes and queues", "hours": 2},
+        # Administrator — 22h
+        {"id": 7, "track": "Administrator", "name": "General Architecture",
+         "desc": "Core Server, DCP/TMS, Broker, URM and call flow", "hours": 3},
+        {"id": 8, "track": "Administrator", "name": "Routing (ACD)",
+         "desc": "ACD configuration and dial plans", "hours": 3},
+        {"id": 9, "track": "Administrator", "name": "M3 Designer — Fundamentals",
+         "desc": "IVR fundamentals with M3 Designer", "hours": 3},
+        {"id": 10, "track": "Administrator", "name": "M3 Advanced",
+         "desc": "Multi-document scripts and database integration", "hours": 3},
+        {"id": 11, "track": "Administrator", "name": "Chat and Web Callback",
+         "desc": "Configuring chat and web callback channels", "hours": 2},
+        {"id": 12, "track": "Administrator", "name": "Enterprise Routing",
+         "desc": "IPNIQ, Broker and cross-site routing", "hours": 3},
+        {"id": 13, "track": "Administrator", "name": "UCC-Admin and URM",
+         "desc": "Administration via UCC-Admin and Unified Resource Manager", "hours": 3},
+        {"id": 14, "track": "Administrator", "name": "Security and Licensing",
+         "desc": "Security, licensing and user management", "hours": 2},
+        # Support Engineer — 17h
+        {"id": 15, "track": "Support Engineer", "name": "Infrastructure and Network",
+         "desc": "UIP infrastructure and network architecture", "hours": 3},
+        {"id": 16, "track": "Support Engineer", "name": "Installation",
+         "desc": "Installation and use of the Server Configurator", "hours": 3},
+        {"id": 17, "track": "Support Engineer", "name": "Upgrade Process",
+         "desc": "Upgrade prerequisites and troubleshooting", "hours": 3},
+        {"id": 18, "track": "Support Engineer", "name": "Diagnostics",
+         "desc": "Logs, Performance Monitor and network tools", "hours": 3},
+        {"id": 19, "track": "Support Engineer", "name": "HA and DR/Failover",
+         "desc": "High availability and disaster recovery/failover", "hours": 2},
+        {"id": 20, "track": "Support Engineer", "name": "Enterprise Integration",
+         "desc": "Integrated view of UIP + ALM + AQM + UCC-Admin", "hours": 3},
     ],
     "ALM": [
-        {"id": 1, "name": "Components (Primary Server, Business Objects Server, Reporting DB Server)",
-         "weight": 10, "priority": "High", "note": "Starting point — platform new to you"},
-        {"id": 2, "name": "Installation types (Stand-Alone, HA, Reporting)",
-         "weight": 10, "priority": "Medium", "note": "Understand client topology"},
-        {"id": 3, "name": "List Build: Static vs. Dynamic (order, priority, catch-all)",
-         "weight": 20, "priority": "High", "note": "Functional core of outbound campaigns"},
-        {"id": 4, "name": "AOD Interface (ALM ↔ CenterCord) — certificates and security",
-         "weight": 15, "priority": "High", "note": "Connects directly to your cert work on UIP"},
-        {"id": 5, "name": "Watchdog + Windows Performance Monitor (almCounter)",
-         "weight": 10, "priority": "Medium", "note": "ALM's own diagnostic tool"},
-        {"id": 6, "name": "Optimizer (\"lift\") — RPC, contacts per agent-hour",
-         "weight": 15, "priority": "Medium", "note": "If BMO uses optimized outbound"},
-        {"id": 7, "name": "Backup / DR (DFS Replication for ALM DR)",
-         "weight": 10, "priority": "Medium", "note": "Tied to the storage/SAN discussion (PRB0068431)"},
-        {"id": 8, "name": "MELDB job schedules (daily / weekly / monthly stored procedures)",
-         "weight": 10, "priority": "Low", "note": "Database maintenance"},
+        # User — 2h
+        {"id": 1, "track": "User", "name": "Outbound Operation",
+         "desc": "Contacts and dispositions in outbound campaigns", "hours": 2},
+        # Supervisor — 4h
+        {"id": 2, "track": "Supervisor", "name": "Real-Time Monitoring",
+         "desc": "CPS and queues for outbound campaigns", "hours": 2},
+        {"id": 3, "track": "Supervisor", "name": "List Management",
+         "desc": "Contact lists and disposition rules", "hours": 2},
+        # Administrator — 8h
+        {"id": 4, "track": "Administrator", "name": "Campaign Concepts",
+         "desc": "Lists, dialers and Optimizer", "hours": 3},
+        {"id": 5, "track": "Administrator", "name": "Campaign Configuration",
+         "desc": "Contact rules and DNC compliance", "hours": 3},
+        {"id": 6, "track": "Administrator", "name": "ALM ↔ UIP Integration",
+         "desc": "Integration with UIP and databases", "hours": 2},
+        # Support Engineer — 9h
+        {"id": 7, "track": "Support Engineer", "name": "Service Architecture",
+         "desc": "QLE, QOP, QHD queues and Watchdog", "hours": 3},
+        {"id": 8, "track": "Support Engineer", "name": "Installation and HA",
+         "desc": "Installation, DFS Replication and high availability", "hours": 3},
+        {"id": 9, "track": "Support Engineer", "name": "Troubleshooting",
+         "desc": "sqlcmd, performance counters and logs", "hours": 3},
     ],
     "AQM": [
-        {"id": 1, "name": "AQM architecture (Mentor Server, recording, IMON)",
-         "weight": 10, "priority": "Base", "note": "Already deep in this — consolidate"},
-        {"id": 2, "name": "Users: mandatory filter by Switch + Role",
-         "weight": 10, "priority": "Base", "note": "Already confirmed in production"},
-        {"id": 3, "name": "Edit User: Agent Position ID and Switch mapping",
-         "weight": 15, "priority": "High", "note": "Next step in the ccs59crds/ccs78crds case"},
-        {"id": 4, "name": "Credential model: AD (domain) vs. AQM app admin (Set Password)",
-         "weight": 10, "priority": "Medium", "note": "Critical distinction already documented"},
-        {"id": 5, "name": "MDC (Mentor Desktop Client) — TLS / Schannel / cipher suites",
-         "weight": 20, "priority": "High", "note": "Active in current troubleshooting"},
-        {"id": 6, "name": "IMON registration flow (\"process unknown to primary server\")",
-         "weight": 15, "priority": "High", "note": "Specific error under investigation now"},
-        {"id": 7, "name": "Evaluation forms / Quality scoring (Admin Guide chapters 8-11)",
-         "weight": 10, "priority": "Low", "note": "Functional side, not just infrastructure"},
-        {"id": 8, "name": "Recording flags and retention policy",
-         "weight": 10, "priority": "Medium", "note": "Relevant for compliance in a banking environment"},
+        # User — 2h
+        {"id": 1, "track": "User", "name": "Desktop Client",
+         "desc": "On-demand recording and self-evaluation", "hours": 2},
+        # Supervisor/Mentor — 9h
+        {"id": 2, "track": "Supervisor", "name": "Live Monitor",
+         "desc": "Real-time monitoring and evaluation creation", "hours": 2},
+        {"id": 3, "track": "Supervisor", "name": "Scorecards",
+         "desc": "Searching, playback and scoring of recordings", "hours": 3},
+        {"id": 4, "track": "Supervisor", "name": "Mentor Calibration",
+         "desc": "Calibration and peer review", "hours": 2},
+        {"id": 5, "track": "Supervisor", "name": "Reports and Trends",
+         "desc": "Reports and trend analysis", "hours": 2},
+        # Administrator — 11h
+        {"id": 6, "track": "Administrator", "name": "Fundamentals and Lifecycle",
+         "desc": "Plan → record → review → report", "hours": 2},
+        {"id": 7, "track": "Administrator", "name": "Users and Access",
+         "desc": "Rights and memberships — Agent/Skill Group, Team", "hours": 2},
+        {"id": 8, "track": "Administrator", "name": "Recording Rules",
+         "desc": "Recording rules and scorecard templates", "hours": 3},
+        {"id": 9, "track": "Administrator", "name": "CMQ",
+         "desc": "Customer Measured Quality — surveys and invitation rules", "hours": 2},
+        {"id": 10, "track": "Administrator", "name": "AQM ↔ UIP Integration",
+         "desc": "Data sync and recording statistics", "hours": 2},
+        # Support Engineer — 10h
+        {"id": 11, "track": "Support Engineer", "name": "Architecture and Config Utility",
+         "desc": "Architecture and Desktop Client Configuration Utility", "hours": 3},
+        {"id": 12, "track": "Support Engineer", "name": "DTC Installation",
+         "desc": "Desktop Client installation (DTC Install)", "hours": 2},
+        {"id": 13, "track": "Support Engineer", "name": "Troubleshooting",
+         "desc": "Storage paths, transcoding and performance", "hours": 3},
+        {"id": 14, "track": "Support Engineer", "name": "Maintenance and Patches",
+         "desc": "Maintenance and hotfix application", "hours": 2},
     ],
 }
 
-PHASES = [
-    {"name": "Phase 1 — Foundation", "weight": 25,
-     "deliverable": "Consolidated architecture diagram",
-     "checklist": ["Architecture diagram drafted (UIP → ALM → AQM topology)",
-                   "Diagram validated against documented sources (not inference)"]},
-    {"name": "Phase 2 — Deep dive", "weight": 45,
-     "deliverable": "Technical notes + DEV/QA testing (one session per 15-20% item)",
-     "checklist": None},  # populated dynamically from high-weight items
-    {"name": "Phase 3 — Application", "weight": 30,
-     "deliverable": "Living documentation updated from real cases",
-     "checklist": ["PRB0068431 (HA / storage-SAN)", "URM 01607749 (certificates)",
-                   "MDC/IMON active troubleshooting", "ccs59crds/ccs78crds (Edit User mapping)"]},
+STATUS_VALUE = {"Not started": 0, "In progress": 50, "Done": 100}
+
+# ---------------------------------------------------------------------------
+# Verint Academy — data pulled from the Cornerstone/Verint LMS dashboard.
+# Two curricula, each a list of modules with a simple Done / Not done toggle
+# (not the 3-state slider used above). Where the LMS gave per-module minutes
+# we kept them (`hours`); where it only gave a lesson-count fraction (e.g.
+# "1/2") we don't have real hours, so `hours` is None and that curriculum
+# falls back to equal-weight-per-module progress. The two curricula are then
+# combined into the single "Verint WFO" gauge using Verint's own reported
+# "Total Duration" per curriculum as the weight.
+# ---------------------------------------------------------------------------
+
+VERINT_CURRICULA = [
+    "Partner Implementation Curriculum",
+    "WFO 15 Enterprise User Management",
 ]
 
-STATUS_OPTIONS = ["Not started", "In progress", "Done"]
-STATUS_VALUE = {"Not started": 0, "In progress": 50, "Done": 100}
-PRIORITY_COLOR = {"Base": BMO_GRAY, "High": BMO_RED, "Medium": BMO_BLUE, "Low": BMO_LIGHT_BLUE}
+VERINT_TOTAL_HOURS = {
+    "Partner Implementation Curriculum": 229 + 40 / 60,   # 229h 40m, as reported by Verint
+    "WFO 15 Enterprise User Management": 11 + 50 / 60,     # 11h 50m, as reported by Verint
+}
 
-ENTRY_TYPES = ["General", "INC", "PRB", "Task"]
-TYPE_COLOR = {"General": BMO_GRAY, "INC": BMO_RED, "PRB": "#D68910", "Task": BMO_BLUE}
-TAG_OPTIONS = ["UIP", "ALM", "AQM", "Dev", "QA", "PRO"]
+VERINT_ITEMS = {
+    "Partner Implementation Curriculum": [
+        {"id": 1, "name": "Accessing the Verint Training Labs [VU01]",
+         "desc": "Lab access orientation", "hours": 2.0, "done": True},
+        {"id": 2, "name": "Enterprise: Core Installation - On-Premise",
+         "desc": "On-premise core installation", "hours": None, "done": False},
+        {"id": 3, "name": "Enterprise: System Administration",
+         "desc": "Enterprise system administration", "hours": None, "done": False},
+        {"id": 4, "name": "Enterprise Authentication: SSO & LDAP Configuration",
+         "desc": "Authentication via SSO and LDAP", "hours": None, "done": False},
+        {"id": 5, "name": "Enterprise Authentication SAML Configuration",
+         "desc": "Authentication via SAML", "hours": None, "done": False},
+        {"id": 6, "name": "Enterprise Security: TLS/SSL Configuration",
+         "desc": "Enterprise security — TLS/SSL", "hours": None, "done": False},
+        {"id": 7, "name": "Encryption: Thales KMS",
+         "desc": "Encryption key management with Thales KMS", "hours": None, "done": False},
+        {"id": 8, "name": "Enterprise: User Management",
+         "desc": "1 of 2 lessons completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 9, "name": "Recording and Archive Configuration",
+         "desc": "Recording and archive setup", "hours": None, "done": False},
+        {"id": 10, "name": "Recording System Administration",
+         "desc": "Recording system administration", "hours": None, "done": False},
+        {"id": 11, "name": "Import/Export Manager Configuration",
+         "desc": "0 of 2 lessons completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 12, "name": "Quality Management (QM)/Interactions Overview",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 13, "name": "Quality Management (QM) Administration",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 14, "name": "Form Designer",
+         "desc": "0 of 2 lessons completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 15, "name": "Automated Quality Management - AQM",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 16, "name": "WFO Reporting",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 17, "name": "Performance Management - Scorecard Administration",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 18, "name": "Performance Management - Scorecard Configuration",
+         "desc": "0 of 4 lessons completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 19, "name": "Post-Curriculum Completion Activities",
+         "desc": "Wrap-up activities after curriculum completion", "hours": None, "done": False},
+    ],
+    "WFO 15 Enterprise User Management": [
+        {"id": 1, "name": "What is User Management",
+         "desc": "WFO-SE-EUM-152-01", "hours": 0.5, "done": False},
+        {"id": 2, "name": "Organisations",
+         "desc": "WFO-SE-EUM-152-02", "hours": 0.75, "done": False},
+        {"id": 3, "name": "Job Titles and Employee Types",
+         "desc": "WFO-SE-EUM-152-03 · New", "hours": 0.25, "done": False},
+        {"id": 4, "name": "Roles and Privileges",
+         "desc": "WFO-SE-EUM-152-04", "hours": 1.5, "done": False},
+        {"id": 5, "name": "Setting Self-Identification Criteria",
+         "desc": "WFO-SE-EUM-152-05", "hours": 1 / 3, "done": False},
+        {"id": 6, "name": "Groups",
+         "desc": "WFO-SE-EUM-152-06", "hours": 0.75, "done": False},
+        {"id": 7, "name": "User Defined Fields",
+         "desc": "WFO-SE-EUM-152-07", "hours": 0.75, "done": False},
+        {"id": 8, "name": "Employee Information",
+         "desc": "WFO-SE-EUM-152-08", "hours": 1.0, "done": False},
+        {"id": 9, "name": "Accessing the Verint Training Labs [VU01]",
+         "desc": "Lab access for this curriculum", "hours": 0.0, "done": False},
+        {"id": 10, "name": "WFO 15 Enterprise User Management - Hands on Lab",
+         "desc": "Self-paced hands-on lab (WFO-15-EUM)", "hours": 6.0, "done": False},
+        {"id": 11, "name": "Post-Curriculum Completion Activities",
+         "desc": "Wrap-up activities after curriculum completion", "hours": 0.0, "done": False},
+    ],
+}
+
+# Curricula whose modules have real per-item hours use hours-weighted progress;
+# the rest (only a lesson-count fraction was available) fall back to counting
+# modules toggled Done out of the total, equally weighted.
+VERINT_HOURS_WEIGHTED = {"WFO 15 Enterprise User Management"}
 
 
 # ---------------------------------------------------------------------------
@@ -320,42 +442,6 @@ def set_status(platform, item_id, status):
     save_progress(st.session_state.progress)
 
 
-def checklist_key(phase_name, label):
-    return f"phase::{phase_name}::{label}"
-
-
-def get_check(phase_name, label):
-    return st.session_state.progress.get(checklist_key(phase_name, label), False)
-
-
-def set_check(phase_name, label, value):
-    st.session_state.progress[checklist_key(phase_name, label)] = value
-    save_progress(st.session_state.progress)
-
-
-def date_key(platform, item_id, which):
-    return f"date:{platform}:{item_id}:{which}"
-
-
-def get_item_date(platform, item_id, which):
-    raw = st.session_state.progress.get(date_key(platform, item_id, which))
-    if raw:
-        try:
-            return date.fromisoformat(raw)
-        except Exception:
-            return None
-    return None
-
-
-def set_item_date(platform, item_id, which, value):
-    key = date_key(platform, item_id, which)
-    if value is None:
-        st.session_state.progress.pop(key, None)
-    else:
-        st.session_state.progress[key] = value.isoformat()
-    save_progress(st.session_state.progress)
-
-
 def get_general_start():
     raw = st.session_state.progress.get("general_start")
     if raw:
@@ -371,168 +457,104 @@ def set_general_start(value):
     save_progress(st.session_state.progress)
 
 
-def notes_key(item_key):
-    return f"notes:{item_key}"
+def get_logbook_text():
+    return st.session_state.progress.get("logbook_text", "")
 
 
-def get_notes(item_key):
-    return st.session_state.progress.get(notes_key(item_key), [])
-
-
-def add_note(item_key, note_date, text, note_type="General", tags=None):
-    notes = get_notes(item_key)
-    notes.append({
-        "date": note_date.isoformat() if note_date else "",
-        "text": text,
-        "type": note_type,
-        "tags": tags or [],
-    })
-    st.session_state.progress[notes_key(item_key)] = notes
+def set_logbook_text(value):
+    st.session_state.progress["logbook_text"] = value
+    st.session_state.progress["logbook_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
     save_progress(st.session_state.progress)
 
 
-def delete_note(item_key, idx):
-    notes = get_notes(item_key)
-    if 0 <= idx < len(notes):
-        notes.pop(idx)
-        st.session_state.progress[notes_key(item_key)] = notes
-        save_progress(st.session_state.progress)
+def get_logbook_updated():
+    return st.session_state.progress.get("logbook_updated")
 
 
-def all_items_done():
-    for platform, items in PLATFORM_ITEMS.items():
-        for i in items:
-            if get_status(platform, i["id"]) != "Done":
-                return False
-    return True
+def verint_key(curriculum, item_id):
+    return f"verint:{curriculum}:{item_id}"
 
 
-def general_end_date():
-    """Latest end date across all items — only meaningful once all items are Done."""
-    end_dates = []
-    for platform, items in PLATFORM_ITEMS.items():
-        for i in items:
-            d = get_item_date(platform, i["id"], "end")
-            if d:
-                end_dates.append(d)
-    return max(end_dates) if end_dates else None
+def get_verint_done(curriculum, item_id):
+    key = verint_key(curriculum, item_id)
+    if key in st.session_state.progress:
+        return st.session_state.progress[key]
+    # Not toggled locally yet — fall back to the snapshot pulled from Verint's LMS.
+    item = next(i for i in VERINT_ITEMS[curriculum] if i["id"] == item_id)
+    return item["done"]
+
+
+def set_verint_done(curriculum, item_id, value):
+    st.session_state.progress[verint_key(curriculum, item_id)] = value
+    save_progress(st.session_state.progress)
 
 
 # ---------------------------------------------------------------------------
-# Calculations
+# Calculations — everything is weighted by `hours`, so there is no manual
+# percentage to keep summing to 100 anymore.
 # ---------------------------------------------------------------------------
+
+def items_by_track(platform):
+    grouped = {t: [] for t in TRACKS}
+    for i in PLATFORM_ITEMS[platform]:
+        grouped[i["track"]].append(i)
+    return grouped
+
+
+def weighted_progress(items, platform):
+    total = sum(i["hours"] for i in items)
+    if not total:
+        return 0.0
+    earned = sum(i["hours"] * STATUS_VALUE[get_status(platform, i["id"])] / 100 for i in items)
+    return round(earned / total * 100, 1)
+
 
 def platform_progress(platform):
-    items = PLATFORM_ITEMS[platform]
-    total_weight = sum(i["weight"] for i in items)
-    earned = sum(i["weight"] * STATUS_VALUE[get_status(platform, i["id"])] / 100 for i in items)
-    return round(earned / total_weight * 100, 1) if total_weight else 0.0
+    return weighted_progress(PLATFORM_ITEMS[platform], platform)
+
+
+def total_hours(platform=None):
+    if platform:
+        return sum(i["hours"] for i in PLATFORM_ITEMS[platform])
+    return sum(i["hours"] for items in PLATFORM_ITEMS.values() for i in items)
 
 
 def overall_progress():
-    total = 0.0
-    for platform, w in PLATFORM_WEIGHTS.items():
-        total += platform_progress(platform) * w / 100
-    return round(total, 1)
+    all_pairs = [(p, i) for p, items in PLATFORM_ITEMS.items() for i in items]
+    grand_total = sum(i["hours"] for p, i in all_pairs)
+    if not grand_total:
+        return 0.0
+    earned = sum(i["hours"] * STATUS_VALUE[get_status(p, i["id"])] / 100 for p, i in all_pairs)
+    return round(earned / grand_total * 100, 1)
 
 
-def high_weight_items():
-    """Items weighted 15-20% across all platforms → Phase 2 dedicated sessions."""
-    result = []
-    for platform, items in PLATFORM_ITEMS.items():
-        for i in items:
-            if i["weight"] >= 15:
-                result.append((platform, i))
-    return result
+def format_duration(hours):
+    total_minutes = round(hours * 60)
+    h, m = divmod(total_minutes, 60)
+    return f"{h}h {m}m" if m else f"{h}h"
 
 
-def phase_progress(phase):
-    if phase["name"] == "Phase 2 — Deep dive":
-        items = high_weight_items()
-        if not items:
+def curriculum_progress(curriculum):
+    items = VERINT_ITEMS[curriculum]
+    if not items:
+        return 0.0
+    if curriculum in VERINT_HOURS_WEIGHTED:
+        total = sum(i["hours"] for i in items)
+        if not total:
             return 0.0
-        done = sum(1 for p, i in items if get_status(p, i["id"]) == "Done")
-        in_prog = sum(1 for p, i in items if get_status(p, i["id"]) == "In progress")
-        return round((done * 100 + in_prog * 50) / len(items), 1)
-    else:
-        checks = phase["checklist"]
-        if not checks:
-            return 0.0
-        done = sum(1 for c in checks if get_check(phase["name"], c))
-        return round(done / len(checks) * 100, 1)
+        earned = sum(i["hours"] for i in items if get_verint_done(curriculum, i["id"]))
+        return round(earned / total * 100, 1)
+    # No reliable per-module hours — count modules toggled Done, equally weighted.
+    done = sum(1 for i in items if get_verint_done(curriculum, i["id"]))
+    return round(done / len(items) * 100, 1)
 
 
-def overall_track_progress():
-    total = 0.0
-    for phase in PHASES:
-        total += phase_progress(phase) * phase["weight"] / 100
-    return round(total, 1)
-
-
-def render_notes_section(item_key, form_prefix):
-    notes = get_notes(item_key)
-    if notes:
-        for idx, n in enumerate(notes):
-            with st.container(border=True):
-                top = st.columns([1, 1, 3.3, 0.5])
-                with top[0]:
-                    st.caption(n.get("date") or "—")
-                with top[1]:
-                    ntype = n.get("type", "General")
-                    color = TYPE_COLOR.get(ntype, BMO_GRAY)
-                    st.markdown(
-                        f"<span class='priority-badge' style='background-color:{color}22;color:{color};'>"
-                        f"{ntype}</span>",
-                        unsafe_allow_html=True,
-                    )
-                with top[2]:
-                    tags = n.get("tags", [])
-                    if tags:
-                        st.markdown(
-                            "".join(f"<span class='tag-badge'>{t}</span>" for t in tags),
-                            unsafe_allow_html=True,
-                        )
-                with top[3]:
-                    if st.button("🗑", key=f"del_{form_prefix}_{idx}"):
-                        delete_note(item_key, idx)
-                        st.rerun()
-                st.write(n.get("text", ""))
-    else:
-        st.caption("No experience or case notes logged yet.")
-
-    with st.form(key=f"form_{form_prefix}", clear_on_submit=True):
-        fcols = st.columns([1, 1, 3, 1.5])
-        with fcols[0]:
-            note_date = st.date_input("Date", value=date.today(), key=f"date_{form_prefix}",
-                                       label_visibility="collapsed")
-        with fcols[1]:
-            note_type = st.selectbox("Type", ENTRY_TYPES, key=f"type_{form_prefix}",
-                                      label_visibility="collapsed")
-        with fcols[2]:
-            note_text = st.text_input(
-                "Note", key=f"text_{form_prefix}", label_visibility="collapsed",
-                placeholder="Case, ticket #, or hands-on experience related to this topic...",
-            )
-        with fcols[3]:
-            note_tags = st.multiselect(
-                "Tags", TAG_OPTIONS, key=f"tags_{form_prefix}", label_visibility="collapsed",
-                placeholder="Tags",
-            )
-        submitted = st.form_submit_button("Add entry")
-        if submitted and note_text.strip():
-            add_note(item_key, note_date, note_text.strip(), note_type, note_tags)
-            st.rerun()
-
-
-def kpi_tile(label, value, bg_color, text_color="#FFFFFF"):
-    return f"""
-    <div style='background-color:{bg_color};padding:1.1rem 1.3rem;
-                border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.15);height:100%;'>
-        <div style='color:{text_color};font-size:0.75rem;font-weight:700;text-transform:uppercase;
-                    letter-spacing:0.04em;opacity:0.9;'>{label}</div>
-        <div style='color:{text_color};font-size:2.1rem;font-weight:800;margin-top:0.3rem;'>{value}</div>
-    </div>
-    """
+def verint_overall_progress():
+    total_h = sum(VERINT_TOTAL_HOURS.values())
+    if not total_h:
+        return 0.0
+    earned = sum(curriculum_progress(c) / 100 * VERINT_TOTAL_HOURS[c] for c in VERINT_CURRICULA)
+    return round(earned / total_h * 100, 1)
 
 
 def make_gauge(value, title, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK):
@@ -563,57 +585,57 @@ def make_gauge(value, title, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK):
 # UI helpers
 # ---------------------------------------------------------------------------
 
+def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, per_row=4):
+    """Compact module cards, `per_row` to a row instead of one full-width row each."""
+    for row_start in range(0, len(items), per_row):
+        row_items = items[row_start:row_start + per_row]
+        cols = st.columns(per_row)
+        for col, i in zip(cols, row_items):
+            with col:
+                with st.container(border=True):
+                    st.markdown(f"<div class='item-name'>{i['name']}</div>", unsafe_allow_html=True)
+                    caption = i["desc"]
+                    if i.get("hours") and hours_fmt:
+                        caption = f"{caption} · {hours_fmt(i['hours'])}"
+                    st.caption(caption)
+                    current_done = get_done(i)
+                    new_done = st.toggle(
+                        "Done", value=current_done,
+                        key=f"{key_prefix}_{i['id']}", label_visibility="collapsed",
+                    )
+                    if new_done != current_done:
+                        set_done(i, new_done)
+                        st.rerun()
+
+
 def render_platform_tab(platform):
-    items = PLATFORM_ITEMS[platform]
     prog = platform_progress(platform)
-    st.subheader(f"{platform} — {PLATFORM_WEIGHTS[platform]}% of overall track")
+    p_hours = total_hours(platform)
+    grand_total = total_hours()
+    share = round(p_hours / grand_total * 100, 1) if grand_total else 0.0
+
+    st.subheader(f"{platform} — {p_hours}h ({share}% of total training)")
     st.progress(prog / 100, text=f"{prog}% complete")
 
-    for i in items:
-        with st.container(border=True):
-            st.markdown(f"<div class='item-name'>{i['id']}. {i['name']}</div>", unsafe_allow_html=True)
-            st.caption(i["note"])
+    grouped = items_by_track(platform)
+    for track in TRACKS:
+        t_items = grouped.get(track, [])
+        if not t_items:
+            continue
+        t_hours = sum(i["hours"] for i in t_items)
+        t_prog = weighted_progress(t_items, platform)
 
-            ccols = st.columns([1, 1.1, 1.8, 1.3, 1.3])
-            with ccols[0]:
-                st.markdown("<span class='col-header'>Weight</span>", unsafe_allow_html=True)
-                st.markdown(f"<span class='item-weight'>{i['weight']}%</span>", unsafe_allow_html=True)
-            with ccols[1]:
-                st.markdown("<span class='col-header'>Priority</span>", unsafe_allow_html=True)
-                color = PRIORITY_COLOR.get(i["priority"], "#999")
-                st.markdown(
-                    f"<span class='priority-badge' style='background-color:{color}22;color:{color};'>"
-                    f"{i['priority']}</span>",
-                    unsafe_allow_html=True,
-                )
-            with ccols[2]:
-                st.markdown("<span class='col-header'>Status</span>", unsafe_allow_html=True)
-                current = get_status(platform, i["id"])
-                new_status = st.selectbox(
-                    "Status", STATUS_OPTIONS, index=STATUS_OPTIONS.index(current),
-                    key=f"sel_{platform}_{i['id']}", label_visibility="collapsed",
-                )
-                if new_status != current:
-                    set_status(platform, i["id"], new_status)
-                    st.rerun()
-            with ccols[3]:
-                st.markdown("<span class='col-header'>Start date</span>", unsafe_allow_html=True)
-                cur_start = get_item_date(platform, i["id"], "start")
-                new_start = st.date_input(
-                    "Start", value=cur_start, key=f"start_{platform}_{i['id']}",
-                    label_visibility="collapsed",
-                )
-                if new_start != cur_start:
-                    set_item_date(platform, i["id"], "start", new_start)
-            with ccols[4]:
-                st.markdown("<span class='col-header'>End date</span>", unsafe_allow_html=True)
-                cur_end = get_item_date(platform, i["id"], "end")
-                new_end = st.date_input(
-                    "End", value=cur_end, key=f"end_{platform}_{i['id']}",
-                    label_visibility="collapsed",
-                )
-                if new_end != cur_end:
-                    set_item_date(platform, i["id"], "end", new_end)
+        st.markdown(f"<div class='progress-title' style='margin-top:1.1rem;'>{track}</div>", unsafe_allow_html=True)
+        st.caption(f"{len(t_items)} modules · {t_hours}h")
+        st.progress(t_prog / 100, text=f"{t_prog}%")
+
+        render_module_grid(
+            t_items,
+            get_done=lambda i: get_status(platform, i["id"]) == "Done",
+            set_done=lambda i, v: set_status(platform, i["id"], "Done" if v else "Not started"),
+            key_prefix=f"stat_{platform}",
+            hours_fmt=lambda h: f"{h}h",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -623,13 +645,18 @@ def render_platform_tab(platform):
 st.title("UIP · ALM · AQM — Training Track Dashboard")
 st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio — Technical Support")
 
-tab_overview, tab_uip, tab_alm, tab_aqm, tab_phases = st.tabs(
-    ["Overview", "UIP", "ALM", "AQM", "Logbook"]
+tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint, tab_logbook = st.tabs(
+    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook"]
 )
 
 with tab_overview:
     overall = overall_progress()
-    track = overall_track_progress()
+
+    # First time the whole track hits 100%, freeze that date as "general end".
+    if overall >= 100 and not st.session_state.progress.get("general_end"):
+        st.session_state.progress["general_end"] = date.today().isoformat()
+        save_progress(st.session_state.progress)
+    general_end_raw = st.session_state.progress.get("general_end")
 
     with st.container(border=True):
         gcol1, gcol2, gcol3 = st.columns([1, 1, 2])
@@ -641,8 +668,8 @@ with tab_overview:
                 set_general_start(g_start)
         with gcol2:
             st.markdown("<span class='col-header'>General end</span>", unsafe_allow_html=True)
-            if all_items_done() and general_end_date():
-                g_end = general_end_date()
+            if general_end_raw:
+                g_end = date.fromisoformat(general_end_raw)
                 st.markdown(
                     f"<span style='font-size:1rem;font-weight:700;'>{g_end.strftime('%b %d, %Y')}</span> "
                     f"<span class='status-badge status-completed'>COMPLETED</span>",
@@ -656,70 +683,36 @@ with tab_overview:
                 )
         with gcol3:
             st.caption(
-                "General end auto-fills with the latest item end date once every "
-                "item across UIP / ALM / AQM is marked Done."
+                "General end auto-fills the first time the whole track (all products, "
+                "weighted by hours) reaches 100%."
             )
 
-    k1, k2, k3, k4 = st.columns(4)
-    with k1:
-        st.markdown(kpi_tile("Overall (platform weight)", f"{overall}%", BMO_BLUE_DARK), unsafe_allow_html=True)
-    with k2:
-        st.markdown(kpi_tile("Overall (phase weight)", f"{track}%", BMO_RED_DEEP), unsafe_allow_html=True)
-    with k3:
-        st.markdown(kpi_tile("UIP", f"{platform_progress('UIP')}%", BMO_BLUE), unsafe_allow_html=True)
-    with k4:
-        st.markdown(
-            kpi_tile("ALM / AQM", f"{platform_progress('ALM')}% / {platform_progress('AQM')}%", BMO_GRAY_DEEP),
-            unsafe_allow_html=True,
-        )
-
-    pcol, phcol = st.columns(2)
-    with pcol, st.container(border=True):
+    with st.container(border=True):
         st.markdown("<div class='progress-card-marker'></div>", unsafe_allow_html=True)
-        st.markdown("<div class='progress-title'>Progress by platform</div>", unsafe_allow_html=True)
-        gcols = st.columns(3)
-        for gc, (platform, w) in zip(gcols, PLATFORM_WEIGHTS.items()):
-            p = platform_progress(platform)
+        st.markdown("<div class='progress-title'>Progress</div>", unsafe_allow_html=True)
+        gauges = [
+            ("Overall", overall, BMO_BLUE_DARK),
+            ("UIP", platform_progress("UIP"), BMO_BLUE),
+            ("ALM", platform_progress("ALM"), BMO_GRAY_DEEP),
+            ("AQM", platform_progress("AQM"), BMO_RED_DEEP),
+            ("Verint WFO", verint_overall_progress(), BMO_RED),
+        ]
+        gcols = st.columns(len(gauges))
+        for gc, (label, value, color) in zip(gcols, gauges):
             with gc:
                 st.plotly_chart(
-                    make_gauge(p, platform, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK),
+                    make_gauge(value, label, bar_color="#FFFFFF", bg_color=color),
                     use_container_width=True,
                     config={"displayModeBar": False},
-                    key=f"gauge_platform_{platform}",
+                    key=f"gauge_{label.replace(' ', '_').lower()}",
                 )
-    with phcol, st.container(border=True):
-        st.markdown("<div class='progress-card-marker'></div>", unsafe_allow_html=True)
-        st.markdown("<div class='progress-title'>Progress by phase</div>", unsafe_allow_html=True)
-        gcols = st.columns(3)
-        for gc, phase in zip(gcols, PHASES):
-            p = phase_progress(phase)
-            short_name = phase["name"].split("—")[-1].strip()
-            with gc:
-                st.plotly_chart(
-                    make_gauge(p, short_name, bar_color="#FFFFFF", bg_color=BMO_RED_DEEP),
-                    use_container_width=True,
-                    config={"displayModeBar": False},
-                    key=f"gauge_phase_{phase['name']}",
-                )
-
-    st.markdown(
-        f"""
-        <div style='background-color:{BMO_BLUE_DARK};padding:1.2rem 1.5rem;
-                    border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.15);margin-bottom:1.3rem;'>
-            <div style='color:#FFFFFF;font-size:1.05rem;font-weight:700;margin-bottom:0.7rem;'>Topology</div>
-            <div style='color:#EAF4FB;font-family:Consolas,monospace;font-size:0.88rem;line-height:1.8;'>
-                UIP (Core) → AOD Interface → ALM (Dialing/Lists)<br>
-                UIP (Core) → Switch/Agent Position → AQM (Recording/Quality)
-            </div>
-            <div style='color:#EAF4FB;font-size:0.82rem;margin-top:0.8rem;opacity:0.85;'>
-                UIP is the foundation for the other two systems — starting point of the track.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
 
 with tab_uip:
+    st.caption(
+        "These are the main topics according to the official documentation. Note: I wasn't able to "
+        "follow through Aspect's official training platform, so this curriculum was built independently "
+        "from the docs instead."
+    )
     render_platform_tab("UIP")
 
 with tab_alm:
@@ -728,45 +721,50 @@ with tab_alm:
 with tab_aqm:
     render_platform_tab("AQM")
 
-with tab_phases:
+with tab_logbook:
     with st.container(border=True):
-        st.markdown("#### Phase 1 — Foundation (25%)")
-        st.caption("Deliverable: Consolidated architecture diagram")
-        for c in PHASES[0]["checklist"]:
-            note_ref = f"phase1:{c}"
-            with st.expander(c, expanded=False):
-                val = st.checkbox("Completed", value=get_check(PHASES[0]["name"], c),
-                                   key=f"p1_{c}")
-                if val != get_check(PHASES[0]["name"], c):
-                    set_check(PHASES[0]["name"], c, val)
-                st.markdown("---")
-                render_notes_section(note_ref, f"p1_{abs(hash(c))}")
+        top = st.columns([3, 1])
+        with top[0]:
+            st.markdown("<div class='progress-title'>Logbook</div>", unsafe_allow_html=True)
+        with top[1]:
+            last_updated = get_logbook_updated()
+            if last_updated:
+                st.caption(f"Last edited: {last_updated}")
 
-    with st.container(border=True):
-        st.markdown("#### Phase 2 — Deep dive (45%)")
-        st.caption("Deliverable: Technical notes + DEV/QA testing — one session per 15-20% item")
-        for platform, i in high_weight_items():
-            note_ref = f"phase2:{platform}:{i['id']}"
-            status = get_status(platform, i["id"])
-            with st.expander(f"[{platform}] {i['name']} — {status}", expanded=False):
-                st.caption(f"Status is managed in the {platform} tab (linked, read-only here): **{status}**")
-                st.markdown("---")
-                render_notes_section(note_ref, f"p2_{platform}_{i['id']}")
-        p2 = phase_progress(PHASES[1])
-        st.progress(p2 / 100, text=f"{p2}%")
+        current_text = get_logbook_text()
+        new_text = st.text_area(
+            "Logbook",
+            value=current_text,
+            height=560,
+            key="logbook_textarea",
+            label_visibility="collapsed",
+            placeholder="Write freely here — daily notes, case details, anything worth remembering...",
+        )
+        if new_text != current_text:
+            set_logbook_text(new_text)
+            st.rerun()
 
-    with st.container(border=True):
-        st.markdown("#### Phase 3 — Application (30%)")
-        st.caption("Deliverable: Living documentation updated — active cases as real practice")
-        for c in PHASES[2]["checklist"]:
-            note_ref = f"phase3:{c}"
-            with st.expander(c, expanded=False):
-                val = st.checkbox("Completed", value=get_check(PHASES[2]["name"], c),
-                                   key=f"p3_{c}")
-                if val != get_check(PHASES[2]["name"], c):
-                    set_check(PHASES[2]["name"], c, val)
-                st.markdown("---")
-                render_notes_section(note_ref, f"p3_{abs(hash(c))}")
+with tab_verint:
+    st.caption(
+        "Courses from Verint's official partner training platform — "
+        "[verintconnect.com/learn](https://verintconnect.com/learn)"
+    )
+
+    for curriculum in VERINT_CURRICULA:
+        items = VERINT_ITEMS[curriculum]
+        prog = curriculum_progress(curriculum)
+
+        st.markdown(f"<div class='progress-title' style='margin-top:1.1rem;'>{curriculum}</div>", unsafe_allow_html=True)
+        st.caption(f"{len(items)} modules · {format_duration(VERINT_TOTAL_HOURS[curriculum])} total")
+        st.progress(prog / 100, text=f"{prog}% complete")
+
+        render_module_grid(
+            items,
+            get_done=lambda i: get_verint_done(curriculum, i["id"]),
+            set_done=lambda i, v: set_verint_done(curriculum, i["id"], v),
+            key_prefix=f"verint_{curriculum}",
+            hours_fmt=format_duration,
+        )
 
 st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
 st.caption(f"Last saved: {datetime.now().strftime('%Y-%m-%d %H:%M')} · Progress stored in {PROGRESS_FILE}")
