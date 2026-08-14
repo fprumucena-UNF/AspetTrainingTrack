@@ -1,6 +1,7 @@
 import streamlit as st
 import json
 import os
+import re
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 import plotly.graph_objects as go
@@ -141,6 +142,16 @@ st.markdown(
     }}
     .priority-focus {{ background-color: #1B873F22; color: #1B873F; }}
     .priority-later {{ background-color: {BMO_GRAY}22; color: {BMO_GRAY}; }}
+    /* Completed module cards — stronger fill + accent border when the Done
+       toggle is on, using the same "hidden marker div + :has()" trick as
+       the Progress card below (Streamlit gives no direct way to style a
+       container from a child widget's state). Card-only, doesn't touch
+       the toggle widget itself. */
+    [data-testid="stVerticalBlockBorderWrapper"]:has(.card-done-marker) {{
+        background-color: #E3F3E9 !important;
+        border: 1px solid #1B873F !important;
+        border-left: 5px solid #1B873F !important;
+    }}
     /* Column header strip */
     .col-header {{
         font-size: 0.82rem !important;
@@ -553,6 +564,35 @@ def get_logbook_updated():
     return st.session_state.progress.get("logbook_updated")
 
 
+# Matches Fabio's Logbook line format, e.g.:
+#   • [2026-07-23] - [CCS - Aspect/Alvaria] - Participated in ... - Learning: ...
+# The bullet/dash before the date is optional so the pattern still catches a
+# line even if it's typed without it — only the [YYYY-MM-DD] at (or near) the
+# start of the line is required.
+LOGBOOK_DATE_RE = re.compile(r"^\s*[•\-]?\s*\[(\d{4}-\d{2}-\d{2})\]")
+
+
+def sort_logbook_text(text, ascending):
+    """Reorders dated entry lines by the [YYYY-MM-DD] at their start.
+
+    Lines that don't match the pattern (blank lines, freeform notes without a
+    date) are left untouched and kept together, ahead of the sorted dated
+    lines — they're never reordered or dropped, just not part of the sort.
+    Same-date lines keep their original relative order (stable sort).
+    """
+    lines = text.split("\n")
+    dated, other = [], []
+    for line in lines:
+        match = LOGBOOK_DATE_RE.match(line)
+        if match:
+            dated.append((match.group(1), line))
+        else:
+            other.append(line)
+    dated.sort(key=lambda pair: pair[0], reverse=not ascending)
+    sorted_lines = [line for _, line in dated]
+    return "\n".join(other + sorted_lines) if other else "\n".join(sorted_lines)
+
+
 def verint_key(curriculum, item_id):
     return f"verint:{curriculum}:{item_id}"
 
@@ -675,6 +715,9 @@ def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, pe
         for col, i in zip(cols, row_items):
             with col:
                 with st.container(border=True):
+                    current_done = get_done(i)
+                    if current_done:
+                        st.markdown("<div class='card-done-marker'></div>", unsafe_allow_html=True)
                     badge_html = ""
                     priority = i.get("priority")
                     if priority in PRIORITY_BADGE:
@@ -688,7 +731,6 @@ def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, pe
                     if i.get("hours") and hours_fmt:
                         caption = f"{caption} · {hours_fmt(i['hours'])}"
                     st.caption(caption)
-                    current_done = get_done(i)
                     new_done = st.toggle(
                         "Done", value=current_done,
                         key=f"{key_prefix}_{i['id']}", label_visibility="collapsed",
@@ -869,13 +911,23 @@ with tab_aqm:
 
 with tab_logbook:
     with st.container(border=True):
-        top = st.columns([3, 1])
+        current_text = get_logbook_text()
+
+        top = st.columns([3, 1, 1.3])
         with top[0]:
             st.markdown("<div class='progress-title'>Logbook</div>", unsafe_allow_html=True)
         with top[1]:
             last_updated = get_logbook_updated()
             if last_updated:
                 st.caption(f"Last edited: {last_updated}")
+        with top[2]:
+            st.download_button(
+                "Download Logbook",
+                data=current_text,
+                file_name=f"logbook_{date.today().isoformat()}.txt",
+                mime="text/plain",
+                disabled=not current_text,
+            )
 
         st.caption(
             "A large part of this training has actually happened outside of formal modules — "
@@ -884,7 +936,23 @@ with tab_logbook:
             "incidents. This log is meant to capture some of the most significant ones."
         )
 
-        current_text = get_logbook_text()
+        sort_cols = st.columns([1.3, 1.3, 4])
+        with sort_cols[0]:
+            if st.button("↑ Oldest first", disabled=not EDIT_UNLOCKED or not current_text,
+                         use_container_width=True):
+                set_logbook_text(sort_logbook_text(current_text, ascending=True))
+                st.rerun()
+        with sort_cols[1]:
+            if st.button("↓ Newest first", disabled=not EDIT_UNLOCKED or not current_text,
+                         use_container_width=True):
+                set_logbook_text(sort_logbook_text(current_text, ascending=False))
+                st.rerun()
+        with sort_cols[2]:
+            st.caption(
+                "Sorts lines starting with a [YYYY-MM-DD] date. Any line without one "
+                "(blank lines, freeform notes) is left as-is, grouped above the sorted entries."
+            )
+
         new_text = st.text_area(
             "Logbook",
             value=current_text,
