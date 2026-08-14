@@ -607,7 +607,7 @@ def make_gauge(value, title, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK):
 # UI helpers
 # ---------------------------------------------------------------------------
 
-def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, per_row=3):
+def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, per_row=4):
     """Compact module cards, `per_row` to a row instead of one full-width row each."""
     for row_start in range(0, len(items), per_row):
         row_items = items[row_start:row_start + per_row]
