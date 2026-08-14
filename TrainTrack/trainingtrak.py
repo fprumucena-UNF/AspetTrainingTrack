@@ -152,6 +152,18 @@ st.markdown(
         border: 1px solid #1B873F !important;
         border-left: 5px solid #1B873F !important;
     }}
+    /* Logbook sort buttons — whichever direction (Oldest/Newest first) was
+       last clicked stays filled in, same marker + :has() trick again, this
+       time targeting the column that holds the active button. Uses
+       BMO_LIGHT_BLUE (already in the palette, just unused elsewhere) so the
+       fill reads as brand blue but doesn't compete with BMO_BLUE_DARK,
+       which the rest of the UI reserves for stronger/darker accents. */
+    [data-testid="stHorizontalBlock"] > div:has(.sort-btn-active) button {{
+        background-color: {BMO_LIGHT_BLUE} !important;
+        color: {BMO_BLUE_DARK} !important;
+        border: 1px solid {BMO_BLUE_DARK} !important;
+        font-weight: 700 !important;
+    }}
     /* Column header strip */
     .col-header {{
         font-size: 0.82rem !important;
@@ -936,16 +948,38 @@ with tab_logbook:
             "incidents. This log is meant to capture some of the most significant ones."
         )
 
+        # Tracks which sort direction was last clicked, purely so the matching
+        # button can stay highlighted (see .sort-btn-active CSS above). Session-
+        # only — resets on page reload, doesn't need to live in progress.json.
+        st.session_state.setdefault("logbook_sort_dir", None)
+
         sort_cols = st.columns([1.3, 1.3, 4])
         with sort_cols[0]:
+            if st.session_state["logbook_sort_dir"] == "asc":
+                st.markdown("<div class='sort-btn-active'></div>", unsafe_allow_html=True)
             if st.button("↑ Oldest first", disabled=not EDIT_UNLOCKED or not current_text,
                          use_container_width=True):
-                set_logbook_text(sort_logbook_text(current_text, ascending=True))
+                sorted_text = sort_logbook_text(current_text, ascending=True)
+                set_logbook_text(sorted_text)
+                # The text_area below is keyed "logbook_textarea" — once rendered,
+                # Streamlit shows whatever is in st.session_state["logbook_textarea"]
+                # and ignores the `value=` we pass it on later reruns. Without this
+                # line the sort saves correctly but the box keeps showing the old
+                # (unsorted) text until the user clicks into it. Setting the keyed
+                # session_state entry directly before rerunning is what makes the
+                # box actually refresh.
+                st.session_state["logbook_textarea"] = sorted_text
+                st.session_state["logbook_sort_dir"] = "asc"
                 st.rerun()
         with sort_cols[1]:
+            if st.session_state["logbook_sort_dir"] == "desc":
+                st.markdown("<div class='sort-btn-active'></div>", unsafe_allow_html=True)
             if st.button("↓ Newest first", disabled=not EDIT_UNLOCKED or not current_text,
                          use_container_width=True):
-                set_logbook_text(sort_logbook_text(current_text, ascending=False))
+                sorted_text = sort_logbook_text(current_text, ascending=False)
+                set_logbook_text(sorted_text)
+                st.session_state["logbook_textarea"] = sorted_text
+                st.session_state["logbook_sort_dir"] = "desc"
                 st.rerun()
         with sort_cols[2]:
             st.caption(
