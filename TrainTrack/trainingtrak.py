@@ -2,7 +2,17 @@ import streamlit as st
 import json
 import os
 from datetime import datetime, date
+from zoneinfo import ZoneInfo
 import plotly.graph_objects as go
+
+# Toronto local time — used for every "last saved/edited" timestamp shown in
+# the UI. America/Toronto auto-switches EST/EDT with daylight saving, and
+# %Z prints whichever one is currently in effect.
+TORONTO_TZ = ZoneInfo("America/Toronto")
+
+
+def now_toronto_str():
+    return datetime.now(TORONTO_TZ).strftime("%Y-%m-%d %H:%M %Z")
 
 st.set_page_config(page_title="UIP · ALM · AQM Training Track", layout="wide")
 
@@ -159,6 +169,20 @@ st.markdown(
         color: {BMO_BLUE_DARK} !important;
         margin: 0 0 0.3rem 0 !important;
     }}
+    /* Section-header badge — same visual language as the tab labels above
+       (solid BMO navy pill, bold white text) so section titles like
+       "Progress" read as a matching part of the same design system. */
+    .section-badge {{
+        display: inline-block;
+        font-size: 1.35rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.02em;
+        color: #FFFFFF !important;
+        background-color: {BMO_BLUE_DARK};
+        padding: 8px 22px;
+        border-radius: 8px;
+        margin: 0 0 1.3rem 0 !important;
+    }}
     .progress-label {{
         font-size: 0.95rem !important;
         color: #333333 !important;
@@ -186,7 +210,12 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-PROGRESS_FILE = "progress.json"
+# Anchored to this script's own folder — guarantees progress.json is always
+# read/written from the same place (TrainTrack/progress.json), no matter
+# where the app is launched from (VS Code, a terminal at the repo root,
+# Streamlit Cloud, etc). A plain "progress.json" relative path is what
+# caused two divergent copies to appear in the repo (2026-08-14).
+PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "progress.json")
 GENERAL_START_DEFAULT = date(2026, 8, 1)
 
 # ---------------------------------------------------------------------------
@@ -463,7 +492,7 @@ def get_logbook_text():
 
 def set_logbook_text(value):
     st.session_state.progress["logbook_text"] = value
-    st.session_state.progress["logbook_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    st.session_state.progress["logbook_updated"] = now_toronto_str()
     save_progress(st.session_state.progress)
 
 
@@ -602,6 +631,7 @@ def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, pe
                     new_done = st.toggle(
                         "Done", value=current_done,
                         key=f"{key_prefix}_{i['id']}", label_visibility="collapsed",
+                        disabled=not EDIT_UNLOCKED,
                     )
                     if new_done != current_done:
                         set_done(i, new_done)
@@ -639,11 +669,48 @@ def render_platform_tab(platform):
 
 
 # ---------------------------------------------------------------------------
+# Access — the app is view-only by default. Editing unlocks only when the
+# correct password is entered, matched against a Streamlit Secret named
+# `edit_password` (Settings → Secrets on Streamlit Cloud, or a local
+# .streamlit/secrets.toml when running on your own machine). The password is
+# never stored in this file, so it's safe even with a public GitHub repo. If
+# no `edit_password` secret is configured for a given deployment, that
+# deployment stays permanently view-only — handy for a "boss link" you never
+# want editable at all.
+# ---------------------------------------------------------------------------
+
+try:
+    EDIT_PASSWORD = st.secrets.get("edit_password")
+except Exception:
+    EDIT_PASSWORD = None
+
+if "edit_unlocked" not in st.session_state:
+    st.session_state.edit_unlocked = False
+
+with st.sidebar:
+    st.markdown("### Access")
+    if st.session_state.edit_unlocked:
+        st.success("Editing unlocked")
+    elif EDIT_PASSWORD:
+        pwd = st.text_input("Password to unlock editing", type="password", key="edit_pwd_input")
+        if pwd:
+            if pwd == EDIT_PASSWORD:
+                st.session_state.edit_unlocked = True
+                st.rerun()
+            else:
+                st.error("Wrong password")
+    else:
+        st.caption("View-only — no edit password configured for this deployment.")
+
+EDIT_UNLOCKED = st.session_state.edit_unlocked
+
+
+# ---------------------------------------------------------------------------
 # Layout
 # ---------------------------------------------------------------------------
 
 st.title("UIP · ALM · AQM — Training Track Dashboard")
-st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio — Technical Support")
+st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio Prumucena — Aspect/Alvaria Specialist | BMO CCS | Connex")
 
 tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint, tab_logbook = st.tabs(
     ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook"]
@@ -663,7 +730,8 @@ with tab_overview:
         with gcol1:
             st.markdown("<span class='col-header'>General start</span>", unsafe_allow_html=True)
             g_start = st.date_input("General start", value=get_general_start(),
-                                     key="general_start_input", label_visibility="collapsed")
+                                     key="general_start_input", label_visibility="collapsed",
+                                     disabled=not EDIT_UNLOCKED)
             if g_start != get_general_start():
                 set_general_start(g_start)
         with gcol2:
@@ -689,7 +757,10 @@ with tab_overview:
 
     with st.container(border=True):
         st.markdown("<div class='progress-card-marker'></div>", unsafe_allow_html=True)
-        st.markdown("<div class='progress-title'>Progress</div>", unsafe_allow_html=True)
+        st.markdown(
+            "<div class='section-badge'>Progress</div>",
+            unsafe_allow_html=True,
+        )
         gauges = [
             ("Overall", overall, BMO_BLUE_DARK),
             ("UIP", platform_progress("UIP"), BMO_BLUE),
@@ -731,6 +802,13 @@ with tab_logbook:
             if last_updated:
                 st.caption(f"Last edited: {last_updated}")
 
+        st.caption(
+            "A large part of this training has actually happened outside of formal modules — "
+            "shadowing colleagues, reading Confluence articles, getting guidance and clarifying "
+            "doubts with the CSS team, and above all working directly on tickets, cases, and "
+            "incidents. This log is meant to capture some of the most significant ones."
+        )
+
         current_text = get_logbook_text()
         new_text = st.text_area(
             "Logbook",
@@ -739,6 +817,7 @@ with tab_logbook:
             key="logbook_textarea",
             label_visibility="collapsed",
             placeholder="Write freely here — daily notes, case details, anything worth remembering...",
+            disabled=not EDIT_UNLOCKED,
         )
         if new_text != current_text:
             set_logbook_text(new_text)
@@ -767,4 +846,4 @@ with tab_verint:
         )
 
 st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
-st.caption(f"Last saved: {datetime.now().strftime('%Y-%m-%d %H:%M')} · Progress stored in {PROGRESS_FILE}")
+st.caption(f"Last saved: {now_toronto_str()} · Progress stored in {PROGRESS_FILE}")
