@@ -528,17 +528,6 @@ def overall_progress():
     return round(earned / grand_total * 100, 1)
 
 
-def track_matrix():
-    """{platform: {track: (module_count, hours)}} — used by the 'Tracks by Product' table."""
-    m = {}
-    for platform, items in PLATFORM_ITEMS.items():
-        m[platform] = {}
-        for t in TRACKS:
-            sub = [i for i in items if i["track"] == t]
-            m[platform][t] = (len(sub), sum(i["hours"] for i in sub))
-    return m
-
-
 def format_duration(hours):
     total_minutes = round(hours * 60)
     h, m = divmod(total_minutes, 60)
@@ -566,17 +555,6 @@ def verint_overall_progress():
         return 0.0
     earned = sum(curriculum_progress(c) / 100 * VERINT_TOTAL_HOURS[c] for c in VERINT_CURRICULA)
     return round(earned / total_h * 100, 1)
-
-
-def kpi_tile(label, value, bg_color, text_color="#FFFFFF"):
-    return f"""
-    <div style='background-color:{bg_color};padding:1.1rem 1.3rem;
-                border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.15);height:100%;'>
-        <div style='color:{text_color};font-size:0.75rem;font-weight:700;text-transform:uppercase;
-                    letter-spacing:0.04em;opacity:0.9;'>{label}</div>
-        <div style='color:{text_color};font-size:2.1rem;font-weight:800;margin-top:0.3rem;'>{value}</div>
-    </div>
-    """
 
 
 def make_gauge(value, title, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK):
@@ -709,58 +687,25 @@ with tab_overview:
                 "weighted by hours) reaches 100%."
             )
 
-    k1, k2, k3, k4 = st.columns(4)
-    with k1:
-        st.markdown(kpi_tile("Overall", f"{overall}%", BMO_BLUE_DARK), unsafe_allow_html=True)
-    with k2:
-        st.markdown(kpi_tile("UIP", f"{platform_progress('UIP')}%", BMO_BLUE), unsafe_allow_html=True)
-    with k3:
-        st.markdown(kpi_tile("ALM", f"{platform_progress('ALM')}%", BMO_GRAY_DEEP), unsafe_allow_html=True)
-    with k4:
-        st.markdown(kpi_tile("AQM", f"{platform_progress('AQM')}%", BMO_RED_DEEP), unsafe_allow_html=True)
-
     with st.container(border=True):
         st.markdown("<div class='progress-card-marker'></div>", unsafe_allow_html=True)
-        st.markdown("<div class='progress-title'>Progress by platform</div>", unsafe_allow_html=True)
-        gcols = st.columns(3)
-        for gc, platform in zip(gcols, PLATFORM_ITEMS.keys()):
-            p = platform_progress(platform)
+        st.markdown("<div class='progress-title'>Progress</div>", unsafe_allow_html=True)
+        gauges = [
+            ("Overall", overall, BMO_BLUE_DARK),
+            ("UIP", platform_progress("UIP"), BMO_BLUE),
+            ("ALM", platform_progress("ALM"), BMO_GRAY_DEEP),
+            ("AQM", platform_progress("AQM"), BMO_RED_DEEP),
+            ("Verint WFO", verint_overall_progress(), BMO_RED),
+        ]
+        gcols = st.columns(len(gauges))
+        for gc, (label, value, color) in zip(gcols, gauges):
             with gc:
                 st.plotly_chart(
-                    make_gauge(p, platform, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK),
+                    make_gauge(value, label, bar_color="#FFFFFF", bg_color=color),
                     use_container_width=True,
                     config={"displayModeBar": False},
-                    key=f"gauge_platform_{platform}",
+                    key=f"gauge_{label.replace(' ', '_').lower()}",
                 )
-
-    with st.container(border=True):
-        st.markdown("<div class='progress-title'>Tracks by Product</div>", unsafe_allow_html=True)
-        m = track_matrix()
-        header_cells = "".join(
-            f"<th style='padding:8px 10px;text-align:center;color:{BMO_GRAY};text-transform:uppercase;"
-            f"font-size:0.72rem;letter-spacing:0.03em;'>{t}</th>"
-            for t in TRACKS
-        )
-        rows_html = ""
-        for platform in PLATFORM_ITEMS:
-            cells = "".join(
-                f"<td style='padding:8px 10px;text-align:center;'>{m[platform][t][1]}h "
-                f"<span style='color:{BMO_GRAY};font-size:0.76rem;'>({m[platform][t][0]}m)</span></td>"
-                for t in TRACKS
-            )
-            rows_html += (
-                f"<tr><td style='padding:8px 10px;font-weight:700;color:{BMO_BLUE_DARK};'>{platform}</td>"
-                f"{cells}</tr>"
-            )
-        st.markdown(
-            f"""
-            <table style='width:100%;border-collapse:collapse;'>
-                <thead><tr><th></th>{header_cells}</tr></thead>
-                <tbody>{rows_html}</tbody>
-            </table>
-            """,
-            unsafe_allow_html=True,
-        )
 
 with tab_uip:
     render_platform_tab("UIP")
@@ -795,23 +740,10 @@ with tab_logbook:
             st.rerun()
 
 with tab_verint:
-    verint_overall = verint_overall_progress()
-
-    with st.container(border=True):
-        st.markdown("<div class='progress-title'>Verint WFO</div>", unsafe_allow_html=True)
-        st.caption(
-            "Courses from Verint's official partner training platform — "
-            "[verintconnect.com/learn](https://verintconnect.com/learn)"
-        )
-        st.caption(f"{format_duration(sum(VERINT_TOTAL_HOURS.values()))} total across {len(VERINT_CURRICULA)} curricula")
-        gcols = st.columns([1, 2, 1])
-        with gcols[1]:
-            st.plotly_chart(
-                make_gauge(verint_overall, "Verint WFO", bar_color="#FFFFFF", bg_color=BMO_RED_DEEP),
-                use_container_width=True,
-                config={"displayModeBar": False},
-                key="gauge_verint_overall",
-            )
+    st.caption(
+        "Courses from Verint's official partner training platform — "
+        "[verintconnect.com/learn](https://verintconnect.com/learn)"
+    )
 
     for curriculum in VERINT_CURRICULA:
         items = VERINT_ITEMS[curriculum]
