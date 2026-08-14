@@ -607,6 +607,29 @@ def make_gauge(value, title, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK):
 # UI helpers
 # ---------------------------------------------------------------------------
 
+def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, per_row=3):
+    """Compact module cards, `per_row` to a row instead of one full-width row each."""
+    for row_start in range(0, len(items), per_row):
+        row_items = items[row_start:row_start + per_row]
+        cols = st.columns(per_row)
+        for col, i in zip(cols, row_items):
+            with col:
+                with st.container(border=True):
+                    st.markdown(f"<div class='item-name'>{i['name']}</div>", unsafe_allow_html=True)
+                    caption = i["desc"]
+                    if i.get("hours") and hours_fmt:
+                        caption = f"{caption} · {hours_fmt(i['hours'])}"
+                    st.caption(caption)
+                    current_done = get_done(i)
+                    new_done = st.toggle(
+                        "Done", value=current_done,
+                        key=f"{key_prefix}_{i['id']}", label_visibility="collapsed",
+                    )
+                    if new_done != current_done:
+                        set_done(i, new_done)
+                        st.rerun()
+
+
 def render_platform_tab(platform):
     prog = platform_progress(platform)
     p_hours = total_hours(platform)
@@ -628,25 +651,13 @@ def render_platform_tab(platform):
         st.caption(f"{len(t_items)} modules · {t_hours}h")
         st.progress(t_prog / 100, text=f"{t_prog}%")
 
-        for i in t_items:
-            with st.container(border=True):
-                ccols = st.columns([3, 2])
-                with ccols[0]:
-                    st.markdown(f"<div class='item-name'>{i['name']}</div>", unsafe_allow_html=True)
-                    st.caption(i["desc"])
-                with ccols[1]:
-                    st.markdown(
-                        f"<div style='text-align:right;'><span class='item-weight'>{i['hours']}h</span></div>",
-                        unsafe_allow_html=True,
-                    )
-                    current_done = get_status(platform, i["id"]) == "Done"
-                    new_done = st.toggle(
-                        "Done", value=current_done,
-                        key=f"stat_{platform}_{i['id']}", label_visibility="collapsed",
-                    )
-                    if new_done != current_done:
-                        set_status(platform, i["id"], "Done" if new_done else "Not started")
-                        st.rerun()
+        render_module_grid(
+            t_items,
+            get_done=lambda i: get_status(platform, i["id"]) == "Done",
+            set_done=lambda i, v: set_status(platform, i["id"], "Done" if v else "Not started"),
+            key_prefix=f"stat_{platform}",
+            hours_fmt=lambda h: f"{h}h",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -806,26 +817,13 @@ with tab_verint:
         st.caption(f"{len(items)} modules · {format_duration(VERINT_TOTAL_HOURS[curriculum])} total")
         st.progress(prog / 100, text=f"{prog}% complete")
 
-        for i in items:
-            with st.container(border=True):
-                ccols = st.columns([3, 2])
-                with ccols[0]:
-                    st.markdown(f"<div class='item-name'>{i['name']}</div>", unsafe_allow_html=True)
-                    st.caption(i["desc"])
-                with ccols[1]:
-                    if i["hours"]:
-                        st.markdown(
-                            f"<div style='text-align:right;'><span class='item-weight'>{format_duration(i['hours'])}</span></div>",
-                            unsafe_allow_html=True,
-                        )
-                    current_done = get_verint_done(curriculum, i["id"])
-                    new_done = st.toggle(
-                        "Done", value=current_done,
-                        key=f"verint_{curriculum}_{i['id']}", label_visibility="collapsed",
-                    )
-                    if new_done != current_done:
-                        set_verint_done(curriculum, i["id"], new_done)
-                        st.rerun()
+        render_module_grid(
+            items,
+            get_done=lambda i: get_verint_done(curriculum, i["id"]),
+            set_done=lambda i, v: set_verint_done(curriculum, i["id"], v),
+            key_prefix=f"verint_{curriculum}",
+            hours_fmt=format_duration,
+        )
 
 st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
 st.caption(f"Last saved: {datetime.now().strftime('%Y-%m-%d %H:%M')} · Progress stored in {PROGRESS_FILE}")
