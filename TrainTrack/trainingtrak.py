@@ -602,6 +602,7 @@ def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, pe
                     new_done = st.toggle(
                         "Done", value=current_done,
                         key=f"{key_prefix}_{i['id']}", label_visibility="collapsed",
+                        disabled=not EDIT_UNLOCKED,
                     )
                     if new_done != current_done:
                         set_done(i, new_done)
@@ -639,6 +640,43 @@ def render_platform_tab(platform):
 
 
 # ---------------------------------------------------------------------------
+# Access — the app is view-only by default. Editing unlocks only when the
+# correct password is entered, matched against a Streamlit Secret named
+# `edit_password` (Settings → Secrets on Streamlit Cloud, or a local
+# .streamlit/secrets.toml when running on your own machine). The password is
+# never stored in this file, so it's safe even with a public GitHub repo. If
+# no `edit_password` secret is configured for a given deployment, that
+# deployment stays permanently view-only — handy for a "boss link" you never
+# want editable at all.
+# ---------------------------------------------------------------------------
+
+try:
+    EDIT_PASSWORD = st.secrets.get("edit_password")
+except Exception:
+    EDIT_PASSWORD = None
+
+if "edit_unlocked" not in st.session_state:
+    st.session_state.edit_unlocked = False
+
+with st.sidebar:
+    st.markdown("### Access")
+    if st.session_state.edit_unlocked:
+        st.success("Editing unlocked")
+    elif EDIT_PASSWORD:
+        pwd = st.text_input("Password to unlock editing", type="password", key="edit_pwd_input")
+        if pwd:
+            if pwd == EDIT_PASSWORD:
+                st.session_state.edit_unlocked = True
+                st.rerun()
+            else:
+                st.error("Wrong password")
+    else:
+        st.caption("View-only — no edit password configured for this deployment.")
+
+EDIT_UNLOCKED = st.session_state.edit_unlocked
+
+
+# ---------------------------------------------------------------------------
 # Layout
 # ---------------------------------------------------------------------------
 
@@ -646,7 +684,7 @@ st.title("UIP · ALM · AQM — Training Track Dashboard")
 st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio — Technical Support")
 
 tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint, tab_logbook = st.tabs(
-    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook"]
+    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook_staging"]
 )
 
 with tab_overview:
@@ -663,7 +701,8 @@ with tab_overview:
         with gcol1:
             st.markdown("<span class='col-header'>General start</span>", unsafe_allow_html=True)
             g_start = st.date_input("General start", value=get_general_start(),
-                                     key="general_start_input", label_visibility="collapsed")
+                                     key="general_start_input", label_visibility="collapsed",
+                                     disabled=not EDIT_UNLOCKED)
             if g_start != get_general_start():
                 set_general_start(g_start)
         with gcol2:
@@ -739,6 +778,7 @@ with tab_logbook:
             key="logbook_textarea",
             label_visibility="collapsed",
             placeholder="Write freely here — daily notes, case details, anything worth remembering...",
+            disabled=not EDIT_UNLOCKED,
         )
         if new_text != current_text:
             set_logbook_text(new_text)
