@@ -708,6 +708,11 @@ with tab_overview:
                 )
 
 with tab_uip:
+    st.caption(
+        "These are the main topics according to the official documentation. Note: I wasn't able to "
+        "follow through Aspect's official training platform, so this curriculum was built independently "
+        "from the docs instead."
+    )
     render_platform_tab("UIP")
 
 with tab_alm:
