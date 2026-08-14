@@ -705,9 +705,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Backup")
     st.caption(
-        "Progress lives on this app's own server disk, not in GitHub. Download a "
-        "copy here before pushing new code or redeploying — a redeploy resets this "
-        "app's disk to whatever is currently committed in the repo."
+        "Progress json file for backup"
     )
     st.download_button(
         "Download progress.json",
