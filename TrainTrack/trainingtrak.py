@@ -253,7 +253,7 @@ TRACKS = ["User", "Supervisor", "Administrator", "Support Engineer"]
 PLATFORM_ITEMS = {
     "UIP": [
         # User — 7h
-        {"id": 1, "track": "User", "name": "Agent Interface",
+        {"id": 1, "track": "User", "name": "Agent Interface (UAD)",
          "desc": "Login, status, transfer and conference calls", "hours": 2,
          "priority": "focus"},
         {"id": 2, "track": "User", "name": "Multichannel Support",
@@ -382,7 +382,7 @@ STATUS_VALUE = {"Not started": 0, "In progress": 50, "Done": 100}
 # sharing a priority keep their original curriculum order among themselves.
 PRIORITY_RANK = {"focus": 0, "deprioritize": 2}
 PRIORITY_BADGE = {
-    "focus": ("Priority", "priority-focus"),
+    "focus": ("CCS Priority", "priority-focus"),
     "deprioritize": ("Later", "priority-later"),
 }
 
