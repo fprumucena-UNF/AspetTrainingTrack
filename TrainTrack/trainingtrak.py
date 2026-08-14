@@ -307,8 +307,100 @@ PLATFORM_ITEMS = {
     ],
 }
 
-STATUS_OPTIONS = ["Not started", "In progress", "Done"]
 STATUS_VALUE = {"Not started": 0, "In progress": 50, "Done": 100}
+
+# ---------------------------------------------------------------------------
+# Verint Academy — data pulled from the Cornerstone/Verint LMS dashboard.
+# Two curricula, each a list of modules with a simple Done / Not done toggle
+# (not the 3-state slider used above). Where the LMS gave per-module minutes
+# we kept them (`hours`); where it only gave a lesson-count fraction (e.g.
+# "1/2") we don't have real hours, so `hours` is None and that curriculum
+# falls back to equal-weight-per-module progress. The two curricula are then
+# combined into the single "Verint WFO" gauge using Verint's own reported
+# "Total Duration" per curriculum as the weight.
+# ---------------------------------------------------------------------------
+
+VERINT_CURRICULA = [
+    "Partner Implementation Curriculum",
+    "WFO 15 Enterprise User Management",
+]
+
+VERINT_TOTAL_HOURS = {
+    "Partner Implementation Curriculum": 229 + 40 / 60,   # 229h 40m, as reported by Verint
+    "WFO 15 Enterprise User Management": 11 + 50 / 60,     # 11h 50m, as reported by Verint
+}
+
+VERINT_ITEMS = {
+    "Partner Implementation Curriculum": [
+        {"id": 1, "name": "Accessing the Verint Training Labs [VU01]",
+         "desc": "Lab access orientation", "hours": 2.0, "done": True},
+        {"id": 2, "name": "Enterprise: Core Installation - On-Premise",
+         "desc": "On-premise core installation", "hours": None, "done": False},
+        {"id": 3, "name": "Enterprise: System Administration",
+         "desc": "Enterprise system administration", "hours": None, "done": False},
+        {"id": 4, "name": "Enterprise Authentication: SSO & LDAP Configuration",
+         "desc": "Authentication via SSO and LDAP", "hours": None, "done": False},
+        {"id": 5, "name": "Enterprise Authentication SAML Configuration",
+         "desc": "Authentication via SAML", "hours": None, "done": False},
+        {"id": 6, "name": "Enterprise Security: TLS/SSL Configuration",
+         "desc": "Enterprise security — TLS/SSL", "hours": None, "done": False},
+        {"id": 7, "name": "Encryption: Thales KMS",
+         "desc": "Encryption key management with Thales KMS", "hours": None, "done": False},
+        {"id": 8, "name": "Enterprise: User Management",
+         "desc": "1 of 2 lessons completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 9, "name": "Recording and Archive Configuration",
+         "desc": "Recording and archive setup", "hours": None, "done": False},
+        {"id": 10, "name": "Recording System Administration",
+         "desc": "Recording system administration", "hours": None, "done": False},
+        {"id": 11, "name": "Import/Export Manager Configuration",
+         "desc": "0 of 2 lessons completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 12, "name": "Quality Management (QM)/Interactions Overview",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 13, "name": "Quality Management (QM) Administration",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 14, "name": "Form Designer",
+         "desc": "0 of 2 lessons completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 15, "name": "Automated Quality Management - AQM",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 16, "name": "WFO Reporting",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 17, "name": "Performance Management - Scorecard Administration",
+         "desc": "0 of 1 lesson completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 18, "name": "Performance Management - Scorecard Configuration",
+         "desc": "0 of 4 lessons completed (per Verint LMS)", "hours": None, "done": False},
+        {"id": 19, "name": "Post-Curriculum Completion Activities",
+         "desc": "Wrap-up activities after curriculum completion", "hours": None, "done": False},
+    ],
+    "WFO 15 Enterprise User Management": [
+        {"id": 1, "name": "What is User Management",
+         "desc": "WFO-SE-EUM-152-01", "hours": 0.5, "done": False},
+        {"id": 2, "name": "Organisations",
+         "desc": "WFO-SE-EUM-152-02", "hours": 0.75, "done": False},
+        {"id": 3, "name": "Job Titles and Employee Types",
+         "desc": "WFO-SE-EUM-152-03 · New", "hours": 0.25, "done": False},
+        {"id": 4, "name": "Roles and Privileges",
+         "desc": "WFO-SE-EUM-152-04", "hours": 1.5, "done": False},
+        {"id": 5, "name": "Setting Self-Identification Criteria",
+         "desc": "WFO-SE-EUM-152-05", "hours": 1 / 3, "done": False},
+        {"id": 6, "name": "Groups",
+         "desc": "WFO-SE-EUM-152-06", "hours": 0.75, "done": False},
+        {"id": 7, "name": "User Defined Fields",
+         "desc": "WFO-SE-EUM-152-07", "hours": 0.75, "done": False},
+        {"id": 8, "name": "Employee Information",
+         "desc": "WFO-SE-EUM-152-08", "hours": 1.0, "done": False},
+        {"id": 9, "name": "Accessing the Verint Training Labs [VU01]",
+         "desc": "Lab access for this curriculum", "hours": 0.0, "done": False},
+        {"id": 10, "name": "WFO 15 Enterprise User Management - Hands on Lab",
+         "desc": "Self-paced hands-on lab (WFO-15-EUM)", "hours": 6.0, "done": False},
+        {"id": 11, "name": "Post-Curriculum Completion Activities",
+         "desc": "Wrap-up activities after curriculum completion", "hours": 0.0, "done": False},
+    ],
+}
+
+# Curricula whose modules have real per-item hours use hours-weighted progress;
+# the rest (only a lesson-count fraction was available) fall back to counting
+# modules toggled Done out of the total, equally weighted.
+VERINT_HOURS_WEIGHTED = {"WFO 15 Enterprise User Management"}
 
 
 # ---------------------------------------------------------------------------
@@ -379,6 +471,24 @@ def get_logbook_updated():
     return st.session_state.progress.get("logbook_updated")
 
 
+def verint_key(curriculum, item_id):
+    return f"verint:{curriculum}:{item_id}"
+
+
+def get_verint_done(curriculum, item_id):
+    key = verint_key(curriculum, item_id)
+    if key in st.session_state.progress:
+        return st.session_state.progress[key]
+    # Not toggled locally yet — fall back to the snapshot pulled from Verint's LMS.
+    item = next(i for i in VERINT_ITEMS[curriculum] if i["id"] == item_id)
+    return item["done"]
+
+
+def set_verint_done(curriculum, item_id, value):
+    st.session_state.progress[verint_key(curriculum, item_id)] = value
+    save_progress(st.session_state.progress)
+
+
 # ---------------------------------------------------------------------------
 # Calculations — everything is weighted by `hours`, so there is no manual
 # percentage to keep summing to 100 anymore.
@@ -427,6 +537,35 @@ def track_matrix():
             sub = [i for i in items if i["track"] == t]
             m[platform][t] = (len(sub), sum(i["hours"] for i in sub))
     return m
+
+
+def format_duration(hours):
+    total_minutes = round(hours * 60)
+    h, m = divmod(total_minutes, 60)
+    return f"{h}h {m}m" if m else f"{h}h"
+
+
+def curriculum_progress(curriculum):
+    items = VERINT_ITEMS[curriculum]
+    if not items:
+        return 0.0
+    if curriculum in VERINT_HOURS_WEIGHTED:
+        total = sum(i["hours"] for i in items)
+        if not total:
+            return 0.0
+        earned = sum(i["hours"] for i in items if get_verint_done(curriculum, i["id"]))
+        return round(earned / total * 100, 1)
+    # No reliable per-module hours — count modules toggled Done, equally weighted.
+    done = sum(1 for i in items if get_verint_done(curriculum, i["id"]))
+    return round(done / len(items) * 100, 1)
+
+
+def verint_overall_progress():
+    total_h = sum(VERINT_TOTAL_HOURS.values())
+    if not total_h:
+        return 0.0
+    earned = sum(curriculum_progress(c) / 100 * VERINT_TOTAL_HOURS[c] for c in VERINT_CURRICULA)
+    return round(earned / total_h * 100, 1)
 
 
 def kpi_tile(label, value, bg_color, text_color="#FFFFFF"):
@@ -500,13 +639,13 @@ def render_platform_tab(platform):
                         f"<div style='text-align:right;'><span class='item-weight'>{i['hours']}h</span></div>",
                         unsafe_allow_html=True,
                     )
-                    current_status = get_status(platform, i["id"])
-                    new_status = st.select_slider(
-                        "Status", options=STATUS_OPTIONS, value=current_status,
+                    current_done = get_status(platform, i["id"]) == "Done"
+                    new_done = st.toggle(
+                        "Done", value=current_done,
                         key=f"stat_{platform}_{i['id']}", label_visibility="collapsed",
                     )
-                    if new_status != current_status:
-                        set_status(platform, i["id"], new_status)
+                    if new_done != current_done:
+                        set_status(platform, i["id"], "Done" if new_done else "Not started")
                         st.rerun()
 
 
@@ -517,8 +656,8 @@ def render_platform_tab(platform):
 st.title("UIP · ALM · AQM — Training Track Dashboard")
 st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio — Technical Support")
 
-tab_overview, tab_uip, tab_alm, tab_aqm, tab_logbook, tab_verint = st.tabs(
-    ["Overview", "UIP", "ALM", "AQM", "Logbook_staging", "Verint Academy"]
+tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint, tab_logbook = st.tabs(
+    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook_staging"]
 )
 
 with tab_overview:
@@ -583,32 +722,6 @@ with tab_overview:
                     key=f"gauge_platform_{platform}",
                 )
 
-    st.markdown(
-        f"""
-        <div style='background-color:{BMO_BLUE_DARK};padding:1.2rem 1.5rem;
-                    border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.15);margin-bottom:1.3rem;'>
-            <div style='color:#FFFFFF;font-size:1.05rem;font-weight:700;margin-bottom:0.7rem;'>Topology</div>
-            <div style='color:#EAF4FB;font-family:Consolas,monospace;font-size:0.85rem;line-height:1.75;white-space:pre;'>
-      Outbound ──►  ┌─────────────┐  ◄── Recording / Quality
-        (ALM)       │     UIP     │        (AQM)
-                     │ ACD·IVR·Rt.│
-                     └─────────────┘
-                            │
-                Voice · Chat · Callback
-                            │
-                      Agent / Customer
-            </div>
-            <div style='color:#EAF4FB;font-size:0.85rem;margin-top:0.9rem;line-height:1.55;opacity:0.92;'>
-                UIP is the central platform (ACD, routing, IVR/M3, chat, callback). ALM feeds outbound
-                contacts into UIP's queues; AQM listens to calls passing through UIP to record and evaluate
-                them. Recommended order: <b>UIP first</b>, then ALM/AQM in parallel. Within each product,
-                depth increases: User → Supervisor → Administrator → Support Engineer.
-            </div>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
     with st.container(border=True):
         st.markdown("<div class='progress-title'>Tracks by Product</div>", unsafe_allow_html=True)
         m = track_matrix()
@@ -671,9 +784,48 @@ with tab_logbook:
             st.rerun()
 
 with tab_verint:
+    verint_overall = verint_overall_progress()
+
     with st.container(border=True):
-        st.markdown("<div class='progress-title'>Verint Academy</div>", unsafe_allow_html=True)
-        st.caption("This tab is a placeholder — content to be added.")
+        st.markdown("<div class='progress-title'>Verint WFO</div>", unsafe_allow_html=True)
+        st.caption(f"{format_duration(sum(VERINT_TOTAL_HOURS.values()))} total across {len(VERINT_CURRICULA)} curricula")
+        gcols = st.columns([1, 2, 1])
+        with gcols[1]:
+            st.plotly_chart(
+                make_gauge(verint_overall, "Verint WFO", bar_color="#FFFFFF", bg_color=BMO_RED_DEEP),
+                use_container_width=True,
+                config={"displayModeBar": False},
+                key="gauge_verint_overall",
+            )
+
+    for curriculum in VERINT_CURRICULA:
+        items = VERINT_ITEMS[curriculum]
+        prog = curriculum_progress(curriculum)
+
+        st.markdown(f"<div class='progress-title' style='margin-top:1.1rem;'>{curriculum}</div>", unsafe_allow_html=True)
+        st.caption(f"{len(items)} modules · {format_duration(VERINT_TOTAL_HOURS[curriculum])} total")
+        st.progress(prog / 100, text=f"{prog}% complete")
+
+        for i in items:
+            with st.container(border=True):
+                ccols = st.columns([3, 2])
+                with ccols[0]:
+                    st.markdown(f"<div class='item-name'>{i['name']}</div>", unsafe_allow_html=True)
+                    st.caption(i["desc"])
+                with ccols[1]:
+                    if i["hours"]:
+                        st.markdown(
+                            f"<div style='text-align:right;'><span class='item-weight'>{format_duration(i['hours'])}</span></div>",
+                            unsafe_allow_html=True,
+                        )
+                    current_done = get_verint_done(curriculum, i["id"])
+                    new_done = st.toggle(
+                        "Done", value=current_done,
+                        key=f"verint_{curriculum}_{i['id']}", label_visibility="collapsed",
+                    )
+                    if new_done != current_done:
+                        set_verint_done(curriculum, i["id"], new_done)
+                        st.rerun()
 
 st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
 st.caption(f"Last saved: {datetime.now().strftime('%Y-%m-%d %H:%M')} · Progress stored in {PROGRESS_FILE}")
