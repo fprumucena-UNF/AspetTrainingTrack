@@ -144,7 +144,7 @@ st.markdown(
     .stProgress {{ margin: 0.15rem 0 !important; }}
     .stProgress > div > div {{ height: 9px !important; }}
     .stProgress > div > div > div > div {{ background-color: {BMO_BLUE} !important; }}
-    /* Compact status slider (fillable "iniciado / em andamento / concluído" bar) */
+    /* Compact status slider (fillable "not started / in progress / done" bar) */
     .stSlider {{ padding-top: 0.1rem !important; margin-bottom: 0.2rem !important; }}
     .stSlider label {{ font-size: 0.8rem !important; }}
     /* Progress-by cards — solid BMO-tinted background with accent border */
@@ -190,7 +190,7 @@ PROGRESS_FILE = "progress.json"
 GENERAL_START_DEFAULT = date(2026, 8, 1)
 
 # ---------------------------------------------------------------------------
-# Data model — training curriculum: 3 products × 4 tracks (trilhas)
+# Data model — training curriculum: 3 products × 4 tracks
 #
 # Each item: id (unique within the platform), track, a *compact* name,
 # a short desc (shown smaller/lighter under the name), and hours.
@@ -198,120 +198,117 @@ GENERAL_START_DEFAULT = date(2026, 8, 1)
 # weighted by `hours` automatically, so nothing can drift out of 100%.
 # ---------------------------------------------------------------------------
 
-TRACKS = ["Usuário", "Supervisor", "Administrador", "Engenheiro de Suporte"]
+TRACKS = ["User", "Supervisor", "Administrator", "Support Engineer"]
 
 PLATFORM_ITEMS = {
     "UIP": [
-        # Usuário — 7h
-        {"id": 1, "track": "Usuário", "name": "Interface do Agente",
-         "desc": "Login, status, transferência e conferência de chamadas", "hours": 2},
-        {"id": 2, "track": "Usuário", "name": "Atendimento Multicanal",
-         "desc": "Voz, chat e callback num único fluxo de atendimento", "hours": 3},
-        {"id": 3, "track": "Usuário", "name": "Unified Director",
-         "desc": "Uso do softphone no dia a dia do agente", "hours": 2},
+        # User — 7h
+        {"id": 1, "track": "User", "name": "Agent Interface",
+         "desc": "Login, status, transfer and conference calls", "hours": 2},
+        {"id": 2, "track": "User", "name": "Multichannel Support",
+         "desc": "Voice, chat and callback in a single interaction flow", "hours": 3},
+        {"id": 3, "track": "User", "name": "Unified Director",
+         "desc": "Day-to-day use of the agent softphone", "hours": 2},
         # Supervisor — 8h
         {"id": 4, "track": "Supervisor", "name": "URM Dashboard",
-         "desc": "Painel de tempo real — filas, agentes e SLAs", "hours": 3},
-        {"id": 5, "track": "Supervisor", "name": "Gestão de Equipe",
-         "desc": "Escalonamento, barge-in/whisper e relatórios operacionais", "hours": 3},
-        {"id": 6, "track": "Supervisor", "name": "UCC-Admin Rápido",
-         "desc": "Ajustes rápidos de rotas e filas", "hours": 2},
-        # Administrador — 22h
-        {"id": 7, "track": "Administrador", "name": "Arquitetura Geral",
-         "desc": "Core Server, DCP/TMS, Broker, URM e fluxo de chamada", "hours": 3},
-        {"id": 8, "track": "Administrador", "name": "Roteamento (ACD)",
-         "desc": "Configuração de ACD e planos de discagem", "hours": 3},
-        {"id": 9, "track": "Administrador", "name": "M3 Designer — Fundamentos",
-         "desc": "Fundamentos de IVR com M3 Designer", "hours": 3},
-        {"id": 10, "track": "Administrador", "name": "M3 Avançado",
-         "desc": "Scripts multi-documento e integração com banco de dados", "hours": 3},
-        {"id": 11, "track": "Administrador", "name": "Chat e Web Callback",
-         "desc": "Configuração de canais de chat e callback web", "hours": 2},
-        {"id": 12, "track": "Administrador", "name": "Enterprise Routing",
-         "desc": "IPNIQ, Broker e roteamento entre sites", "hours": 3},
-        {"id": 13, "track": "Administrador", "name": "UCC-Admin e URM",
-         "desc": "Administração via UCC-Admin e Unified Resource Manager", "hours": 3},
-        {"id": 14, "track": "Administrador", "name": "Segurança e Licenciamento",
-         "desc": "Segurança, licenciamento e gestão de usuários", "hours": 2},
-        # Engenheiro de Suporte — 17h
-        {"id": 15, "track": "Engenheiro de Suporte", "name": "Infraestrutura e Rede",
-         "desc": "Arquitetura de infraestrutura e rede do UIP", "hours": 3},
-        {"id": 16, "track": "Engenheiro de Suporte", "name": "Instalação",
-         "desc": "Instalação e uso do Server Configurator", "hours": 3},
-        {"id": 17, "track": "Engenheiro de Suporte", "name": "Processo de Upgrade",
-         "desc": "Pré-requisitos e troubleshooting de upgrade", "hours": 3},
-        {"id": 18, "track": "Engenheiro de Suporte", "name": "Diagnóstico",
-         "desc": "Logs, Performance Monitor e ferramentas de rede", "hours": 3},
-        {"id": 19, "track": "Engenheiro de Suporte", "name": "HA e DR/Failover",
-         "desc": "Alta disponibilidade e disaster recovery/failover", "hours": 2},
-        {"id": 20, "track": "Engenheiro de Suporte", "name": "Integração Enterprise",
-         "desc": "Visão integrada UIP + ALM + AQM + UCC-Admin", "hours": 3},
+         "desc": "Real-time panel — queues, agents and SLAs", "hours": 3},
+        {"id": 5, "track": "Supervisor", "name": "Team Management",
+         "desc": "Escalation, barge-in/whisper and operational reports", "hours": 3},
+        {"id": 6, "track": "Supervisor", "name": "Quick UCC-Admin",
+         "desc": "Quick adjustments to routes and queues", "hours": 2},
+        # Administrator — 22h
+        {"id": 7, "track": "Administrator", "name": "General Architecture",
+         "desc": "Core Server, DCP/TMS, Broker, URM and call flow", "hours": 3},
+        {"id": 8, "track": "Administrator", "name": "Routing (ACD)",
+         "desc": "ACD configuration and dial plans", "hours": 3},
+        {"id": 9, "track": "Administrator", "name": "M3 Designer — Fundamentals",
+         "desc": "IVR fundamentals with M3 Designer", "hours": 3},
+        {"id": 10, "track": "Administrator", "name": "M3 Advanced",
+         "desc": "Multi-document scripts and database integration", "hours": 3},
+        {"id": 11, "track": "Administrator", "name": "Chat and Web Callback",
+         "desc": "Configuring chat and web callback channels", "hours": 2},
+        {"id": 12, "track": "Administrator", "name": "Enterprise Routing",
+         "desc": "IPNIQ, Broker and cross-site routing", "hours": 3},
+        {"id": 13, "track": "Administrator", "name": "UCC-Admin and URM",
+         "desc": "Administration via UCC-Admin and Unified Resource Manager", "hours": 3},
+        {"id": 14, "track": "Administrator", "name": "Security and Licensing",
+         "desc": "Security, licensing and user management", "hours": 2},
+        # Support Engineer — 17h
+        {"id": 15, "track": "Support Engineer", "name": "Infrastructure and Network",
+         "desc": "UIP infrastructure and network architecture", "hours": 3},
+        {"id": 16, "track": "Support Engineer", "name": "Installation",
+         "desc": "Installation and use of the Server Configurator", "hours": 3},
+        {"id": 17, "track": "Support Engineer", "name": "Upgrade Process",
+         "desc": "Upgrade prerequisites and troubleshooting", "hours": 3},
+        {"id": 18, "track": "Support Engineer", "name": "Diagnostics",
+         "desc": "Logs, Performance Monitor and network tools", "hours": 3},
+        {"id": 19, "track": "Support Engineer", "name": "HA and DR/Failover",
+         "desc": "High availability and disaster recovery/failover", "hours": 2},
+        {"id": 20, "track": "Support Engineer", "name": "Enterprise Integration",
+         "desc": "Integrated view of UIP + ALM + AQM + UCC-Admin", "hours": 3},
     ],
     "ALM": [
-        # Usuário — 2h
-        {"id": 1, "track": "Usuário", "name": "Operação Outbound",
-         "desc": "Contatos e disposições em campanhas outbound", "hours": 2},
+        # User — 2h
+        {"id": 1, "track": "User", "name": "Outbound Operation",
+         "desc": "Contacts and dispositions in outbound campaigns", "hours": 2},
         # Supervisor — 4h
-        {"id": 2, "track": "Supervisor", "name": "Monitoramento em Tempo Real",
-         "desc": "CPS e filas de campanhas outbound", "hours": 2},
-        {"id": 3, "track": "Supervisor", "name": "Gestão de Listas",
-         "desc": "Listas de contatos e regras de disposição", "hours": 2},
-        # Administrador — 8h
-        {"id": 4, "track": "Administrador", "name": "Conceitos de Campanha",
-         "desc": "Listas, discadores e Optimizer", "hours": 3},
-        {"id": 5, "track": "Administrador", "name": "Configuração de Campanhas",
-         "desc": "Regras de contato e compliance (DNC)", "hours": 3},
-        {"id": 6, "track": "Administrador", "name": "Integração ALM ↔ UIP",
-         "desc": "Integração com UIP e bancos de dados", "hours": 2},
-        # Engenheiro de Suporte — 9h
-        {"id": 7, "track": "Engenheiro de Suporte", "name": "Arquitetura de Serviços",
-         "desc": "Filas QLE, QOP, QHD e Watchdog", "hours": 3},
-        {"id": 8, "track": "Engenheiro de Suporte", "name": "Instalação e HA",
-         "desc": "Instalação, DFS Replication e alta disponibilidade", "hours": 3},
-        {"id": 9, "track": "Engenheiro de Suporte", "name": "Troubleshooting",
-         "desc": "sqlcmd, contadores de performance e logs", "hours": 3},
+        {"id": 2, "track": "Supervisor", "name": "Real-Time Monitoring",
+         "desc": "CPS and queues for outbound campaigns", "hours": 2},
+        {"id": 3, "track": "Supervisor", "name": "List Management",
+         "desc": "Contact lists and disposition rules", "hours": 2},
+        # Administrator — 8h
+        {"id": 4, "track": "Administrator", "name": "Campaign Concepts",
+         "desc": "Lists, dialers and Optimizer", "hours": 3},
+        {"id": 5, "track": "Administrator", "name": "Campaign Configuration",
+         "desc": "Contact rules and DNC compliance", "hours": 3},
+        {"id": 6, "track": "Administrator", "name": "ALM ↔ UIP Integration",
+         "desc": "Integration with UIP and databases", "hours": 2},
+        # Support Engineer — 9h
+        {"id": 7, "track": "Support Engineer", "name": "Service Architecture",
+         "desc": "QLE, QOP, QHD queues and Watchdog", "hours": 3},
+        {"id": 8, "track": "Support Engineer", "name": "Installation and HA",
+         "desc": "Installation, DFS Replication and high availability", "hours": 3},
+        {"id": 9, "track": "Support Engineer", "name": "Troubleshooting",
+         "desc": "sqlcmd, performance counters and logs", "hours": 3},
     ],
     "AQM": [
-        # Usuário — 2h
-        {"id": 1, "track": "Usuário", "name": "Desktop Client",
-         "desc": "Gravação sob demanda e autoavaliação", "hours": 2},
+        # User — 2h
+        {"id": 1, "track": "User", "name": "Desktop Client",
+         "desc": "On-demand recording and self-evaluation", "hours": 2},
         # Supervisor/Mentor — 9h
         {"id": 2, "track": "Supervisor", "name": "Live Monitor",
-         "desc": "Monitoramento e avaliações em tempo real", "hours": 2},
+         "desc": "Real-time monitoring and evaluation creation", "hours": 2},
         {"id": 3, "track": "Supervisor", "name": "Scorecards",
-         "desc": "Busca, reprodução e pontuação de gravações", "hours": 3},
-        {"id": 4, "track": "Supervisor", "name": "Calibração entre Mentores",
-         "desc": "Calibração e revisão por pares", "hours": 2},
-        {"id": 5, "track": "Supervisor", "name": "Relatórios e Tendências",
-         "desc": "Relatórios e análise de tendências", "hours": 2},
-        # Administrador — 11h
-        {"id": 6, "track": "Administrador", "name": "Fundamentos e Ciclo de Vida",
-         "desc": "Planejar → gravar → revisar → reportar", "hours": 2},
-        {"id": 7, "track": "Administrador", "name": "Usuários e Acessos",
-         "desc": "Direitos e memberships — Agent/Skill Group, Team", "hours": 2},
-        {"id": 8, "track": "Administrador", "name": "Regras de Gravação",
-         "desc": "Regras de gravação e templates de scorecard", "hours": 3},
-        {"id": 9, "track": "Administrador", "name": "CMQ",
-         "desc": "Customer Measured Quality — pesquisas e convites", "hours": 2},
-        {"id": 10, "track": "Administrador", "name": "Integração AQM ↔ UIP",
-         "desc": "Sync de dados e estatísticas de gravação", "hours": 2},
-        # Engenheiro de Suporte — 10h
-        {"id": 11, "track": "Engenheiro de Suporte", "name": "Arquitetura e Config Utility",
-         "desc": "Arquitetura e Desktop Client Configuration Utility", "hours": 3},
-        {"id": 12, "track": "Engenheiro de Suporte", "name": "Instalação DTC",
-         "desc": "Instalação do Desktop Client (DTC Install)", "hours": 2},
-        {"id": 13, "track": "Engenheiro de Suporte", "name": "Troubleshooting",
-         "desc": "Storage paths, transcodificação e performance", "hours": 3},
-        {"id": 14, "track": "Engenheiro de Suporte", "name": "Manutenção e Patches",
-         "desc": "Manutenção e aplicação de hotfixes", "hours": 2},
+         "desc": "Searching, playback and scoring of recordings", "hours": 3},
+        {"id": 4, "track": "Supervisor", "name": "Mentor Calibration",
+         "desc": "Calibration and peer review", "hours": 2},
+        {"id": 5, "track": "Supervisor", "name": "Reports and Trends",
+         "desc": "Reports and trend analysis", "hours": 2},
+        # Administrator — 11h
+        {"id": 6, "track": "Administrator", "name": "Fundamentals and Lifecycle",
+         "desc": "Plan → record → review → report", "hours": 2},
+        {"id": 7, "track": "Administrator", "name": "Users and Access",
+         "desc": "Rights and memberships — Agent/Skill Group, Team", "hours": 2},
+        {"id": 8, "track": "Administrator", "name": "Recording Rules",
+         "desc": "Recording rules and scorecard templates", "hours": 3},
+        {"id": 9, "track": "Administrator", "name": "CMQ",
+         "desc": "Customer Measured Quality — surveys and invitation rules", "hours": 2},
+        {"id": 10, "track": "Administrator", "name": "AQM ↔ UIP Integration",
+         "desc": "Data sync and recording statistics", "hours": 2},
+        # Support Engineer — 10h
+        {"id": 11, "track": "Support Engineer", "name": "Architecture and Config Utility",
+         "desc": "Architecture and Desktop Client Configuration Utility", "hours": 3},
+        {"id": 12, "track": "Support Engineer", "name": "DTC Installation",
+         "desc": "Desktop Client installation (DTC Install)", "hours": 2},
+        {"id": 13, "track": "Support Engineer", "name": "Troubleshooting",
+         "desc": "Storage paths, transcoding and performance", "hours": 3},
+        {"id": 14, "track": "Support Engineer", "name": "Maintenance and Patches",
+         "desc": "Maintenance and hotfix application", "hours": 2},
     ],
 }
 
 STATUS_OPTIONS = ["Not started", "In progress", "Done"]
 STATUS_VALUE = {"Not started": 0, "In progress": 50, "Done": 100}
-STATUS_EN_TO_PT = {"Not started": "Não iniciado", "In progress": "Em andamento", "Done": "Concluído"}
-STATUS_PT_TO_EN = {v: k for k, v in STATUS_EN_TO_PT.items()}
-STATUS_OPTIONS_PT = ["Não iniciado", "Em andamento", "Concluído"]
 
 
 # ---------------------------------------------------------------------------
@@ -422,7 +419,7 @@ def overall_progress():
 
 
 def track_matrix():
-    """{platform: {track: (module_count, hours)}} — used by the 'Trilhas por produto' table."""
+    """{platform: {track: (module_count, hours)}} — used by the 'Tracks by Product' table."""
     m = {}
     for platform, items in PLATFORM_ITEMS.items():
         m[platform] = {}
@@ -477,8 +474,8 @@ def render_platform_tab(platform):
     grand_total = total_hours()
     share = round(p_hours / grand_total * 100, 1) if grand_total else 0.0
 
-    st.subheader(f"{platform} — {p_hours}h ({share}% do treinamento total)")
-    st.progress(prog / 100, text=f"{prog}% concluído")
+    st.subheader(f"{platform} — {p_hours}h ({share}% of total training)")
+    st.progress(prog / 100, text=f"{prog}% complete")
 
     grouped = items_by_track(platform)
     for track in TRACKS:
@@ -489,7 +486,7 @@ def render_platform_tab(platform):
         t_prog = weighted_progress(t_items, platform)
 
         st.markdown(f"<div class='progress-title' style='margin-top:1.1rem;'>{track}</div>", unsafe_allow_html=True)
-        st.caption(f"{len(t_items)} módulos · {t_hours}h")
+        st.caption(f"{len(t_items)} modules · {t_hours}h")
         st.progress(t_prog / 100, text=f"{t_prog}%")
 
         for i in t_items:
@@ -503,14 +500,13 @@ def render_platform_tab(platform):
                         f"<div style='text-align:right;'><span class='item-weight'>{i['hours']}h</span></div>",
                         unsafe_allow_html=True,
                     )
-                    current_en = get_status(platform, i["id"])
-                    current_pt = STATUS_EN_TO_PT[current_en]
-                    new_pt = st.select_slider(
-                        "Status", options=STATUS_OPTIONS_PT, value=current_pt,
+                    current_status = get_status(platform, i["id"])
+                    new_status = st.select_slider(
+                        "Status", options=STATUS_OPTIONS, value=current_status,
                         key=f"stat_{platform}_{i['id']}", label_visibility="collapsed",
                     )
-                    if new_pt != current_pt:
-                        set_status(platform, i["id"], STATUS_PT_TO_EN[new_pt])
+                    if new_status != current_status:
+                        set_status(platform, i["id"], new_status)
                         st.rerun()
 
 
@@ -521,8 +517,8 @@ def render_platform_tab(platform):
 st.title("UIP · ALM · AQM — Training Track Dashboard")
 st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio — Technical Support")
 
-tab_overview, tab_uip, tab_alm, tab_aqm, tab_logbook = st.tabs(
-    ["Overview", "UIP", "ALM", "AQM", "Logbook_staging"]
+tab_overview, tab_uip, tab_alm, tab_aqm, tab_logbook, tab_verint = st.tabs(
+    ["Overview", "UIP", "ALM", "AQM", "Logbook_staging", "Verint Academy"]
 )
 
 with tab_overview:
@@ -593,20 +589,20 @@ with tab_overview:
                     border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.15);margin-bottom:1.3rem;'>
             <div style='color:#FFFFFF;font-size:1.05rem;font-weight:700;margin-bottom:0.7rem;'>Topology</div>
             <div style='color:#EAF4FB;font-family:Consolas,monospace;font-size:0.85rem;line-height:1.75;white-space:pre;'>
-      Outbound ──►  ┌─────────────┐  ◄── Gravação / Qualidade
+      Outbound ──►  ┌─────────────┐  ◄── Recording / Quality
         (ALM)       │     UIP     │        (AQM)
-                     │ ACD·IVR·Rot.│
+                     │ ACD·IVR·Rt.│
                      └─────────────┘
                             │
-                Voz · Chat · Callback
+                Voice · Chat · Callback
                             │
-                      Agente / Cliente
+                      Agent / Customer
             </div>
             <div style='color:#EAF4FB;font-size:0.85rem;margin-top:0.9rem;line-height:1.55;opacity:0.92;'>
-                UIP é a plataforma central (ACD, roteamento, IVR/M3, chat, callback). ALM injeta contatos
-                outbound nas filas do UIP; AQM escuta as chamadas que passam pelo UIP para gravar e avaliar.
-                Ordem recomendada: <b>UIP primeiro</b>, depois ALM/AQM em paralelo. Dentro de cada produto,
-                a profundidade sobe: Usuário → Supervisor → Administrador → Engenheiro de Suporte.
+                UIP is the central platform (ACD, routing, IVR/M3, chat, callback). ALM feeds outbound
+                contacts into UIP's queues; AQM listens to calls passing through UIP to record and evaluate
+                them. Recommended order: <b>UIP first</b>, then ALM/AQM in parallel. Within each product,
+                depth increases: User → Supervisor → Administrator → Support Engineer.
             </div>
         </div>
         """,
@@ -614,7 +610,7 @@ with tab_overview:
     )
 
     with st.container(border=True):
-        st.markdown("<div class='progress-title'>Trilhas por produto</div>", unsafe_allow_html=True)
+        st.markdown("<div class='progress-title'>Tracks by Product</div>", unsafe_allow_html=True)
         m = track_matrix()
         header_cells = "".join(
             f"<th style='padding:8px 10px;text-align:center;color:{BMO_GRAY};text-transform:uppercase;"
@@ -673,6 +669,11 @@ with tab_logbook:
         if new_text != current_text:
             set_logbook_text(new_text)
             st.rerun()
+
+with tab_verint:
+    with st.container(border=True):
+        st.markdown("<div class='progress-title'>Verint Academy</div>", unsafe_allow_html=True)
+        st.caption("This tab is a placeholder — content to be added.")
 
 st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
 st.caption(f"Last saved: {datetime.now().strftime('%Y-%m-%d %H:%M')} · Progress stored in {PROGRESS_FILE}")
