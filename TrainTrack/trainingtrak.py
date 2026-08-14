@@ -2,7 +2,17 @@ import streamlit as st
 import json
 import os
 from datetime import datetime, date
+from zoneinfo import ZoneInfo
 import plotly.graph_objects as go
+
+# Toronto local time — used for every "last saved/edited" timestamp shown in
+# the UI. America/Toronto auto-switches EST/EDT with daylight saving, and
+# %Z prints whichever one is currently in effect.
+TORONTO_TZ = ZoneInfo("America/Toronto")
+
+
+def now_toronto_str():
+    return datetime.now(TORONTO_TZ).strftime("%Y-%m-%d %H:%M %Z")
 
 st.set_page_config(page_title="UIP · ALM · AQM Training Track", layout="wide")
 
@@ -186,7 +196,12 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
-PROGRESS_FILE = "progress.json"
+# Anchored to this script's own folder — guarantees progress.json is always
+# read/written from the same place (TrainTrack/progress.json), no matter
+# where the app is launched from (VS Code, a terminal at the repo root,
+# Streamlit Cloud, etc). A plain "progress.json" relative path is what
+# caused two divergent copies to appear in the repo (2026-08-14).
+PROGRESS_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "progress.json")
 GENERAL_START_DEFAULT = date(2026, 8, 1)
 
 # ---------------------------------------------------------------------------
@@ -463,7 +478,7 @@ def get_logbook_text():
 
 def set_logbook_text(value):
     st.session_state.progress["logbook_text"] = value
-    st.session_state.progress["logbook_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    st.session_state.progress["logbook_updated"] = now_toronto_str()
     save_progress(st.session_state.progress)
 
 
@@ -681,10 +696,10 @@ EDIT_UNLOCKED = st.session_state.edit_unlocked
 # ---------------------------------------------------------------------------
 
 st.title("UIP · ALM · AQM — Training Track Dashboard")
-st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio — Technical Support")
+st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio Prumucena — Aspect/Alvaria Specialist | BMO CCS | Connex")
 
 tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint, tab_logbook = st.tabs(
-    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook_staging"]
+    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook"]
 )
 
 with tab_overview:
@@ -728,7 +743,10 @@ with tab_overview:
 
     with st.container(border=True):
         st.markdown("<div class='progress-card-marker'></div>", unsafe_allow_html=True)
-        st.markdown("<div class='progress-title'>Progress</div>", unsafe_allow_html=True)
+        st.markdown(
+            "<div class='progress-title' style='font-size:1.55rem; margin-bottom:1rem;'>Progress</div>",
+            unsafe_allow_html=True,
+        )
         gauges = [
             ("Overall", overall, BMO_BLUE_DARK),
             ("UIP", platform_progress("UIP"), BMO_BLUE),
@@ -807,4 +825,4 @@ with tab_verint:
         )
 
 st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
-st.caption(f"Last saved: {datetime.now().strftime('%Y-%m-%d %H:%M')} · Progress stored in {PROGRESS_FILE}")
+st.caption(f"Last saved: {now_toronto_str()} · Progress stored in {PROGRESS_FILE}")
