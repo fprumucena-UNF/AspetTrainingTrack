@@ -802,6 +802,13 @@ with tab_logbook:
             if last_updated:
                 st.caption(f"Last edited: {last_updated}")
 
+        st.caption(
+            "A large part of this training has actually happened outside of formal modules — "
+            "shadowing colleagues, reading Confluence articles, getting guidance and clarifying "
+            "doubts with the CSS team, and above all working directly on tickets, cases, and "
+            "incidents. This log is meant to capture some of the most significant ones."
+        )
+
         current_text = get_logbook_text()
         new_text = st.text_area(
             "Logbook",
