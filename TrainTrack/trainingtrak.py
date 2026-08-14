@@ -646,7 +646,7 @@ st.title("UIP · ALM · AQM — Training Track Dashboard")
 st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio — Technical Support")
 
 tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint, tab_logbook = st.tabs(
-    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook_staging"]
+    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook"]
 )
 
 with tab_overview:
