@@ -187,6 +187,16 @@ st.markdown(
     }}
     /* Ensure text stays dark/readable regardless of OS dark-mode preference */
     body, p, span, div, label {{ color: #1A1A1A; }}
+    /* Logbook notepad — plain white writing area */
+    .stTextArea textarea {{
+        background-color: #FFFFFF !important;
+        color: #1A1A1A !important;
+        font-size: 1.02rem !important;
+        line-height: 1.7 !important;
+        padding: 1rem !important;
+        border: 1px solid #E1DFDD !important;
+        border-radius: 6px !important;
+    }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -397,6 +407,20 @@ def delete_note(item_key, idx):
         notes.pop(idx)
         st.session_state.progress[notes_key(item_key)] = notes
         save_progress(st.session_state.progress)
+
+
+def get_logbook_text():
+    return st.session_state.progress.get("logbook_text", "")
+
+
+def set_logbook_text(value):
+    st.session_state.progress["logbook_text"] = value
+    st.session_state.progress["logbook_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M")
+    save_progress(st.session_state.progress)
+
+
+def get_logbook_updated():
+    return st.session_state.progress.get("logbook_updated")
 
 
 def all_items_done():
@@ -730,43 +754,26 @@ with tab_aqm:
 
 with tab_phases:
     with st.container(border=True):
-        st.markdown("#### Phase 1 — Foundation (25%)")
-        st.caption("Deliverable: Consolidated architecture diagram")
-        for c in PHASES[0]["checklist"]:
-            note_ref = f"phase1:{c}"
-            with st.expander(c, expanded=False):
-                val = st.checkbox("Completed", value=get_check(PHASES[0]["name"], c),
-                                   key=f"p1_{c}")
-                if val != get_check(PHASES[0]["name"], c):
-                    set_check(PHASES[0]["name"], c, val)
-                st.markdown("---")
-                render_notes_section(note_ref, f"p1_{abs(hash(c))}")
+        top = st.columns([3, 1])
+        with top[0]:
+            st.markdown("<div class='progress-title'>Logbook</div>", unsafe_allow_html=True)
+        with top[1]:
+            last_updated = get_logbook_updated()
+            if last_updated:
+                st.caption(f"Last edited: {last_updated}")
 
-    with st.container(border=True):
-        st.markdown("#### Phase 2 — Deep dive (45%)")
-        st.caption("Deliverable: Technical notes + DEV/QA testing — one session per 15-20% item")
-        for platform, i in high_weight_items():
-            note_ref = f"phase2:{platform}:{i['id']}"
-            status = get_status(platform, i["id"])
-            with st.expander(f"[{platform}] {i['name']} — {status}", expanded=False):
-                st.caption(f"Status is managed in the {platform} tab (linked, read-only here): **{status}**")
-                st.markdown("---")
-                render_notes_section(note_ref, f"p2_{platform}_{i['id']}")
-        p2 = phase_progress(PHASES[1])
-        st.progress(p2 / 100, text=f"{p2}%")
-
-    with st.container(border=True):
-        st.markdown("#### Phase 3 — Application (30%)")
-        st.caption("Deliverable: Living documentation updated — active cases as real practice")
-        for c in PHASES[2]["checklist"]:
-            note_ref = f"phase3:{c}"
-            with st.expander(c, expanded=False):
-                val = st.checkbox("Completed", value=get_check(PHASES[2]["name"], c),
-                                   key=f"p3_{c}")
-                if val != get_check(PHASES[2]["name"], c):
-                    set_check(PHASES[2]["name"], c, val)
-                st.markdown("---")
-                render_notes_section(note_ref, f"p3_{abs(hash(c))}")
+        current_text = get_logbook_text()
+        new_text = st.text_area(
+            "Logbook",
+            value=current_text,
+            height=560,
+            key="logbook_textarea",
+            label_visibility="collapsed",
+            placeholder="Write freely here — daily notes, case details, anything worth remembering...",
+        )
+        if new_text != current_text:
+            set_logbook_text(new_text)
+            st.rerun()
 
 st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
 st.caption(f"Last saved: {datetime.now().strftime('%Y-%m-%d %H:%M')} · Progress stored in {PROGRESS_FILE}")
