@@ -1,5 +1,9 @@
-# Local progress data (personal, don't commit) — uncomment if you don't want it on GitHub
-progress.json
+# Local progress data — intentionally NOT ignored: progress.json is committed
+# on purpose so training progress survives Streamlit Cloud restarts/redeploys
+# (its filesystem isn't persistent). The content is just training toggles/
+# dates, nothing sensitive, so it's fine to have in a public repo.
+# progress.json
+
 # Python
 __pycache__/
 *.pyc
