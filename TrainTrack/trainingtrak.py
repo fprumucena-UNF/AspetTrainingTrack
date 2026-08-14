@@ -142,15 +142,23 @@ st.markdown(
     }}
     .priority-focus {{ background-color: #1B873F22; color: #1B873F; }}
     .priority-later {{ background-color: {BMO_GRAY}22; color: {BMO_GRAY}; }}
+    .done-badge {{ background-color: #0F7A3826; color: #0F7A38; }}
     /* Completed module cards — stronger fill + accent border when the Done
        toggle is on, using the same "hidden marker div + :has()" trick as
        the Progress card below (Streamlit gives no direct way to style a
-       container from a child widget's state). Card-only, doesn't touch
-       the toggle widget itself. */
-    [data-testid="stVerticalBlockBorderWrapper"]:has(.card-done-marker) {{
-        background-color: #E3F3E9 !important;
-        border: 1px solid #1B873F !important;
-        border-left: 5px solid #1B873F !important;
+       container from a child widget's state). Deliberately bold — this was
+       bumped up 2026-08-14 after the original pale tint (#E3F3E9) read as
+       barely-there, especially in view-only mode where every widget in the
+       card is already grayed out by Streamlit's own disabled styling and a
+       subtle fill got lost in that. #D2F2DF keeps caption text (BMO_GRAY,
+       0.85rem) at ~3.9:1 contrast — checked against WCAG so it stays
+       readable, not just decorative. Card-only, doesn't touch the toggle
+       widget itself, and applies regardless of edit-lock state since it's
+       driven purely by the module's saved status. */
+    [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .card-done-marker) {{
+        background-color: #D2F2DF !important;
+        border: 2px solid #0F7A38 !important;
+        border-left: 6px solid #0F7A38 !important;
     }}
     /* Logbook sort buttons — whichever direction (Oldest/Newest first) was
        last clicked stays filled in, same marker + :has() trick again, this
@@ -195,8 +203,18 @@ st.markdown(
     /* Compact status slider (fillable "not started / in progress / done" bar) */
     .stSlider {{ padding-top: 0.1rem !important; margin-bottom: 0.2rem !important; }}
     .stSlider label {{ font-size: 0.8rem !important; }}
-    /* Progress-by cards — solid BMO-tinted background with accent border */
-    [data-testid="stVerticalBlockBorderWrapper"]:has(.progress-card-marker) {{
+    /* Progress-by cards — solid BMO-tinted background with accent border.
+       Selector fixed 2026-08-14: Streamlit renamed the bordered-container
+       testid at some point after this app was first built (it used to be
+       stVerticalBlockBorderWrapper; current installs don't emit that
+       attribute at all anymore — see the docs' own §7 fragility note).
+       ":has(> [data-testid=stElementContainer] .marker)" pins the match to
+       the one stVerticalBlock that *directly* wraps the markdown element
+       holding our marker div, so it targets just that card — a plain
+       "[data-testid=stVerticalBlock]:has(.marker)" would also match every
+       ancestor block further up the tree (the column, the row, ...) since
+       :has() isn't limited to the nearest match. */
+    [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .progress-card-marker) {{
         background-color: #EAF4FB !important;
         border: 1px solid {BMO_BLUE} !important;
         border-left: 5px solid {BMO_BLUE} !important;
@@ -734,7 +752,13 @@ def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, pe
                     priority = i.get("priority")
                     if priority in PRIORITY_BADGE:
                         label, css_class = PRIORITY_BADGE[priority]
-                        badge_html = f"<span class='priority-badge {css_class}'>{label}</span>"
+                        badge_html += f"<span class='priority-badge {css_class}'>{label}</span>"
+                    if current_done:
+                        # Text + checkmark alongside the fill, not just color —
+                        # so the "done" state still reads clearly for anyone
+                        # who can't distinguish the green tint (color-blind
+                        # users, printed/grayscale views, etc).
+                        badge_html += "<span class='priority-badge done-badge'>✓ Completed</span>"
                     st.markdown(
                         f"<div class='item-name'>{i['name']}{badge_html}</div>",
                         unsafe_allow_html=True,
@@ -820,9 +844,7 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Backup")
     st.caption(
-        "Progress lives on this app's own server disk, not in GitHub. Download a "
-        "copy here before pushing new code or redeploying — a redeploy resets this "
-        "app's disk to whatever is currently committed in the repo."
+        "Progress Backup: Download from app"
     )
     st.download_button(
         "Download progress.json",
@@ -902,7 +924,7 @@ with tab_overview:
             with gc:
                 st.plotly_chart(
                     make_gauge(value, label, bar_color="#FFFFFF", bg_color=color),
-                    use_container_width=True,
+                    width="stretch",
                     config={"displayModeBar": False},
                     key=f"gauge_{label.replace(' ', '_').lower()}",
                 )
@@ -924,6 +946,14 @@ with tab_aqm:
 with tab_logbook:
     with st.container(border=True):
         current_text = get_logbook_text()
+        # Streamlit warns if a keyed widget gets both a `value=` argument and
+        # a pre-set st.session_state entry on the same run (the sort buttons
+        # below need to set the latter to force the box to refresh). The
+        # clean pattern it recommends: seed session_state once, up front,
+        # and never pass `value=` to the widget itself — see the text_area
+        # call further down.
+        if "logbook_textarea" not in st.session_state:
+            st.session_state["logbook_textarea"] = current_text
 
         top = st.columns([3, 1, 1.3])
         with top[0]:
@@ -953,31 +983,38 @@ with tab_logbook:
         # only — resets on page reload, doesn't need to live in progress.json.
         st.session_state.setdefault("logbook_sort_dir", None)
 
+        # Sorting is a *view* operation, not an edit — it works even in
+        # view-only mode (no password entered). If editing is unlocked, the
+        # new order is also saved to progress.json so it sticks around; if
+        # not, it only changes what this browser session currently sees
+        # (via the logbook_textarea session-state trick below) and the
+        # underlying saved Logbook is left untouched. That keeps the
+        # password gate meaningful — a view-only visitor (e.g. the `main`
+        # app shared with Fabio's manager) can re-sort their own view
+        # without being able to permanently reorder anyone else's data.
         sort_cols = st.columns([1.3, 1.3, 4])
         with sort_cols[0]:
             if st.session_state["logbook_sort_dir"] == "asc":
                 st.markdown("<div class='sort-btn-active'></div>", unsafe_allow_html=True)
-            if st.button("↑ Oldest first", disabled=not EDIT_UNLOCKED or not current_text,
-                         use_container_width=True):
+            if st.button("↑ Oldest first", disabled=not current_text, width="stretch"):
                 sorted_text = sort_logbook_text(current_text, ascending=True)
-                set_logbook_text(sorted_text)
+                if EDIT_UNLOCKED:
+                    set_logbook_text(sorted_text)
                 # The text_area below is keyed "logbook_textarea" — once rendered,
                 # Streamlit shows whatever is in st.session_state["logbook_textarea"]
-                # and ignores the `value=` we pass it on later reruns. Without this
-                # line the sort saves correctly but the box keeps showing the old
-                # (unsorted) text until the user clicks into it. Setting the keyed
-                # session_state entry directly before rerunning is what makes the
-                # box actually refresh.
+                # and ignores the `value=` we pass it on later reruns. Setting the
+                # keyed session_state entry directly (regardless of EDIT_UNLOCKED)
+                # is what makes the box actually show the new order.
                 st.session_state["logbook_textarea"] = sorted_text
                 st.session_state["logbook_sort_dir"] = "asc"
                 st.rerun()
         with sort_cols[1]:
             if st.session_state["logbook_sort_dir"] == "desc":
                 st.markdown("<div class='sort-btn-active'></div>", unsafe_allow_html=True)
-            if st.button("↓ Newest first", disabled=not EDIT_UNLOCKED or not current_text,
-                         use_container_width=True):
+            if st.button("↓ Newest first", disabled=not current_text, width="stretch"):
                 sorted_text = sort_logbook_text(current_text, ascending=False)
-                set_logbook_text(sorted_text)
+                if EDIT_UNLOCKED:
+                    set_logbook_text(sorted_text)
                 st.session_state["logbook_textarea"] = sorted_text
                 st.session_state["logbook_sort_dir"] = "desc"
                 st.rerun()
@@ -985,11 +1022,12 @@ with tab_logbook:
             st.caption(
                 "Sorts lines starting with a [YYYY-MM-DD] date. Any line without one "
                 "(blank lines, freeform notes) is left as-is, grouped above the sorted entries."
+                + ("" if EDIT_UNLOCKED else " View-only: this reorders what you see here, "
+                   "but isn't saved since editing is locked.")
             )
 
         new_text = st.text_area(
             "Logbook",
-            value=current_text,
             height=560,
             key="logbook_textarea",
             label_visibility="collapsed",
