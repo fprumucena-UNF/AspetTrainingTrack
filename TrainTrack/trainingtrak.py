@@ -799,6 +799,10 @@ with tab_verint:
 
     with st.container(border=True):
         st.markdown("<div class='progress-title'>Verint WFO</div>", unsafe_allow_html=True)
+        st.caption(
+            "Courses from Verint's official partner training platform — "
+            "[verintconnect.com/learn](https://verintconnect.com/learn)"
+        )
         st.caption(f"{format_duration(sum(VERINT_TOTAL_HOURS.values()))} total across {len(VERINT_CURRICULA)} curricula")
         gcols = st.columns([1, 2, 1])
         with gcols[1]:
