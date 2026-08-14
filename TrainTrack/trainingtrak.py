@@ -702,6 +702,20 @@ with st.sidebar:
     else:
         st.caption("View-only — no edit password configured for this deployment.")
 
+    st.markdown("---")
+    st.markdown("### Backup")
+    st.caption(
+        "Progress lives on this app's own server disk, not in GitHub. Download a "
+        "copy here before pushing new code or redeploying — a redeploy resets this "
+        "app's disk to whatever is currently committed in the repo."
+    )
+    st.download_button(
+        "Download progress.json",
+        data=json.dumps(st.session_state.progress, indent=2, ensure_ascii=False),
+        file_name="progress_backup.json",
+        mime="application/json",
+    )
+
 EDIT_UNLOCKED = st.session_state.edit_unlocked
 
 
