@@ -1,1 +1,18 @@
-{"UIP:2": "In progress", "phase::Phase 1 \u2014 Foundation::Architecture diagram drafted (UIP \u2192 ALM \u2192 AQM topology)": false}
+{
+  "UIP:2": "In progress",
+  "phase::Phase 1 — Foundation::Architecture diagram drafted (UIP → ALM → AQM topology)": false,
+  "UIP:4": "Done",
+  "UIP:3": "Done",
+  "UIP:7": "Done",
+  "UIP:8": "Done",
+  "UIP:17": "Done",
+  "UIP:19": "Done",
+  "ALM:1": "Done",
+  "ALM:4": "Done",
+  "ALM:7": "Not started",
+  "AQM:1": "Done",
+  "AQM:2": "Done",
+  "AQM:4": "Done",
+  "AQM:10": "Done",
+  "verint:Partner Implementation Curriculum:4": true
+}
