@@ -96,22 +96,16 @@ st.markdown(
     }}
     /* Item labels — compact */
     .item-name {{
-        font-size: 1.1rem !important;
+        font-size: 1.05rem !important;
         font-weight: 600 !important;
         line-height: 1.3 !important;
         color: {BMO_BLUE_DARK} !important;
-        margin: 0 0 0.4rem 0 !important;
+        margin: 0 0 0.15rem 0 !important;
     }}
     .item-weight {{
-        font-size: 1.1rem !important;
+        font-size: 0.95rem !important;
         font-weight: 700 !important;
         color: {BMO_BLUE} !important;
-    }}
-    .priority-badge {{
-        font-size: 0.85rem !important;
-        padding: 3px 11px !important;
-        border-radius: 8px !important;
-        font-weight: 600 !important;
     }}
     .status-badge {{
         font-size: 0.85rem !important;
@@ -138,7 +132,7 @@ st.markdown(
     h1 {{ font-size: 1.7rem !important; color: {BMO_BLUE_DARK} !important; margin-bottom: 0.3rem !important; }}
     h3 {{ font-size: 1.2rem !important; margin: 0.25rem 0 !important; color: {BMO_BLUE_DARK} !important; }}
     h4 {{ font-size: 1.05rem !important; margin: 0.25rem 0 !important; color: {BMO_BLUE_DARK} !important; }}
-    [data-testid="stCaptionContainer"] {{ font-size: 0.88rem !important; margin: 0.15rem 0 0 0 !important; }}
+    [data-testid="stCaptionContainer"] {{ font-size: 0.85rem !important; margin: 0.1rem 0 0 0 !important; color: {BMO_GRAY} !important; }}
     /* Metrics — PowerBI KPI tile look */
     [data-testid="stMetric"] {{ padding: 0.25rem 0 !important; }}
     [data-testid="stMetricValue"] {{ font-size: 1.9rem !important; color: {BMO_BLUE_DARK} !important; }}
@@ -150,8 +144,9 @@ st.markdown(
     .stProgress {{ margin: 0.15rem 0 !important; }}
     .stProgress > div > div {{ height: 9px !important; }}
     .stProgress > div > div > div > div {{ background-color: {BMO_BLUE} !important; }}
-    /* Checkbox text */
-    .stCheckbox label p {{ font-size: 1rem !important; }}
+    /* Compact status slider (fillable "iniciado / em andamento / concluído" bar) */
+    .stSlider {{ padding-top: 0.1rem !important; margin-bottom: 0.2rem !important; }}
+    .stSlider label {{ font-size: 0.8rem !important; }}
     /* Progress-by cards — solid BMO-tinted background with accent border */
     [data-testid="stVerticalBlockBorderWrapper"]:has(.progress-card-marker) {{
         background-color: #EAF4FB !important;
@@ -159,10 +154,10 @@ st.markdown(
         border-left: 5px solid {BMO_BLUE} !important;
     }}
     .progress-title {{
-        font-size: 1.15rem !important;
+        font-size: 1.1rem !important;
         font-weight: 700 !important;
         color: {BMO_BLUE_DARK} !important;
-        margin: 0 0 0.5rem 0 !important;
+        margin: 0 0 0.3rem 0 !important;
     }}
     .progress-label {{
         font-size: 0.95rem !important;
@@ -174,19 +169,6 @@ st.markdown(
         font-weight: 700 !important;
         color: {BMO_BLUE_DARK} !important;
     }}
-    /* Journal entry tag badges */
-    .tag-badge {{
-        font-size: 0.72rem !important;
-        font-weight: 600 !important;
-        padding: 2px 9px !important;
-        border-radius: 8px !important;
-        background-color: {BMO_LIGHT_BLUE}33 !important;
-        color: {BMO_BLUE_DARK} !important;
-        margin-right: 4px !important;
-        display: inline-block;
-    }}
-    /* Ensure text stays dark/readable regardless of OS dark-mode preference */
-    body, p, span, div, label {{ color: #1A1A1A; }}
     /* Logbook notepad — plain white writing area */
     .stTextArea textarea {{
         background-color: #FFFFFF !important;
@@ -197,6 +179,8 @@ st.markdown(
         border: 1px solid #E1DFDD !important;
         border-radius: 6px !important;
     }}
+    /* Ensure text stays dark/readable regardless of OS dark-mode preference */
+    body, p, span, div, label {{ color: #1A1A1A; }}
     </style>
     """,
     unsafe_allow_html=True,
@@ -206,89 +190,128 @@ PROGRESS_FILE = "progress.json"
 GENERAL_START_DEFAULT = date(2026, 8, 1)
 
 # ---------------------------------------------------------------------------
-# Data model — sourced directly from Training_Track_UIP_ALM_AQM.docx
+# Data model — training curriculum: 3 products × 4 tracks (trilhas)
+#
+# Each item: id (unique within the platform), track, a *compact* name,
+# a short desc (shown smaller/lighter under the name), and hours.
+# There is no manual "weight" to keep in sync anymore — progress is
+# weighted by `hours` automatically, so nothing can drift out of 100%.
 # ---------------------------------------------------------------------------
 
-PLATFORM_WEIGHTS = {"UIP": 35, "ALM": 35, "AQM": 30}
+TRACKS = ["Usuário", "Supervisor", "Administrador", "Engenheiro de Suporte"]
 
 PLATFORM_ITEMS = {
     "UIP": [
-        {"id": 1, "name": "General architecture (Core Server, CenterCord, CC2DCP, Alert Server, Import/Export, DBI)",
-         "weight": 10, "priority": "Base", "note": "Review — you already know most of this"},
-        {"id": 2, "name": "HA per component (independent failover, quorum vs. AlwaysOn+FSW)",
-         "weight": 15, "priority": "High", "note": "Reinforce with the PRB0068431 case"},
-        {"id": 3, "name": "LDAP / Integrated Authentication (Windows Logon + Domain)",
-         "weight": 10, "priority": "Medium", "note": "Recurring in login troubleshooting"},
-        {"id": 4, "name": "Certificate management (LDAP/AD root, Tomcat Portal, UCCAdmin)",
-         "weight": 15, "priority": "High", "note": "Tied to the URM case 01607749"},
-        {"id": 5, "name": "M3 (IVR scripting) — script / service / server",
-         "weight": 20, "priority": "High", "note": "New area — highest time investment"},
-        {"id": 6, "name": "Unified Director / UCCAdmin (Adapter, Server, Enterprise DB)",
-         "weight": 15, "priority": "Medium", "note": "Central multi-site administration"},
-        {"id": 7, "name": "Enterprise deployment rules (upgrade, backup/recovery, add/remove sites)",
-         "weight": 10, "priority": "Medium", "note": "Relevant for CAB / change control"},
-        {"id": 8, "name": "Alerts and severities (Alert Server, message catalog)",
-         "weight": 5, "priority": "Low", "note": "Quick reference, not deep study"},
+        # Usuário — 7h
+        {"id": 1, "track": "Usuário", "name": "Interface do Agente",
+         "desc": "Login, status, transferência e conferência de chamadas", "hours": 2},
+        {"id": 2, "track": "Usuário", "name": "Atendimento Multicanal",
+         "desc": "Voz, chat e callback num único fluxo de atendimento", "hours": 3},
+        {"id": 3, "track": "Usuário", "name": "Unified Director",
+         "desc": "Uso do softphone no dia a dia do agente", "hours": 2},
+        # Supervisor — 8h
+        {"id": 4, "track": "Supervisor", "name": "URM Dashboard",
+         "desc": "Painel de tempo real — filas, agentes e SLAs", "hours": 3},
+        {"id": 5, "track": "Supervisor", "name": "Gestão de Equipe",
+         "desc": "Escalonamento, barge-in/whisper e relatórios operacionais", "hours": 3},
+        {"id": 6, "track": "Supervisor", "name": "UCC-Admin Rápido",
+         "desc": "Ajustes rápidos de rotas e filas", "hours": 2},
+        # Administrador — 22h
+        {"id": 7, "track": "Administrador", "name": "Arquitetura Geral",
+         "desc": "Core Server, DCP/TMS, Broker, URM e fluxo de chamada", "hours": 3},
+        {"id": 8, "track": "Administrador", "name": "Roteamento (ACD)",
+         "desc": "Configuração de ACD e planos de discagem", "hours": 3},
+        {"id": 9, "track": "Administrador", "name": "M3 Designer — Fundamentos",
+         "desc": "Fundamentos de IVR com M3 Designer", "hours": 3},
+        {"id": 10, "track": "Administrador", "name": "M3 Avançado",
+         "desc": "Scripts multi-documento e integração com banco de dados", "hours": 3},
+        {"id": 11, "track": "Administrador", "name": "Chat e Web Callback",
+         "desc": "Configuração de canais de chat e callback web", "hours": 2},
+        {"id": 12, "track": "Administrador", "name": "Enterprise Routing",
+         "desc": "IPNIQ, Broker e roteamento entre sites", "hours": 3},
+        {"id": 13, "track": "Administrador", "name": "UCC-Admin e URM",
+         "desc": "Administração via UCC-Admin e Unified Resource Manager", "hours": 3},
+        {"id": 14, "track": "Administrador", "name": "Segurança e Licenciamento",
+         "desc": "Segurança, licenciamento e gestão de usuários", "hours": 2},
+        # Engenheiro de Suporte — 17h
+        {"id": 15, "track": "Engenheiro de Suporte", "name": "Infraestrutura e Rede",
+         "desc": "Arquitetura de infraestrutura e rede do UIP", "hours": 3},
+        {"id": 16, "track": "Engenheiro de Suporte", "name": "Instalação",
+         "desc": "Instalação e uso do Server Configurator", "hours": 3},
+        {"id": 17, "track": "Engenheiro de Suporte", "name": "Processo de Upgrade",
+         "desc": "Pré-requisitos e troubleshooting de upgrade", "hours": 3},
+        {"id": 18, "track": "Engenheiro de Suporte", "name": "Diagnóstico",
+         "desc": "Logs, Performance Monitor e ferramentas de rede", "hours": 3},
+        {"id": 19, "track": "Engenheiro de Suporte", "name": "HA e DR/Failover",
+         "desc": "Alta disponibilidade e disaster recovery/failover", "hours": 2},
+        {"id": 20, "track": "Engenheiro de Suporte", "name": "Integração Enterprise",
+         "desc": "Visão integrada UIP + ALM + AQM + UCC-Admin", "hours": 3},
     ],
     "ALM": [
-        {"id": 1, "name": "Components (Primary Server, Business Objects Server, Reporting DB Server)",
-         "weight": 10, "priority": "High", "note": "Starting point — platform new to you"},
-        {"id": 2, "name": "Installation types (Stand-Alone, HA, Reporting)",
-         "weight": 10, "priority": "Medium", "note": "Understand client topology"},
-        {"id": 3, "name": "List Build: Static vs. Dynamic (order, priority, catch-all)",
-         "weight": 20, "priority": "High", "note": "Functional core of outbound campaigns"},
-        {"id": 4, "name": "AOD Interface (ALM ↔ CenterCord) — certificates and security",
-         "weight": 15, "priority": "High", "note": "Connects directly to your cert work on UIP"},
-        {"id": 5, "name": "Watchdog + Windows Performance Monitor (almCounter)",
-         "weight": 10, "priority": "Medium", "note": "ALM's own diagnostic tool"},
-        {"id": 6, "name": "Optimizer (\"lift\") — RPC, contacts per agent-hour",
-         "weight": 15, "priority": "Medium", "note": "If BMO uses optimized outbound"},
-        {"id": 7, "name": "Backup / DR (DFS Replication for ALM DR)",
-         "weight": 10, "priority": "Medium", "note": "Tied to the storage/SAN discussion (PRB0068431)"},
-        {"id": 8, "name": "MELDB job schedules (daily / weekly / monthly stored procedures)",
-         "weight": 10, "priority": "Low", "note": "Database maintenance"},
+        # Usuário — 2h
+        {"id": 1, "track": "Usuário", "name": "Operação Outbound",
+         "desc": "Contatos e disposições em campanhas outbound", "hours": 2},
+        # Supervisor — 4h
+        {"id": 2, "track": "Supervisor", "name": "Monitoramento em Tempo Real",
+         "desc": "CPS e filas de campanhas outbound", "hours": 2},
+        {"id": 3, "track": "Supervisor", "name": "Gestão de Listas",
+         "desc": "Listas de contatos e regras de disposição", "hours": 2},
+        # Administrador — 8h
+        {"id": 4, "track": "Administrador", "name": "Conceitos de Campanha",
+         "desc": "Listas, discadores e Optimizer", "hours": 3},
+        {"id": 5, "track": "Administrador", "name": "Configuração de Campanhas",
+         "desc": "Regras de contato e compliance (DNC)", "hours": 3},
+        {"id": 6, "track": "Administrador", "name": "Integração ALM ↔ UIP",
+         "desc": "Integração com UIP e bancos de dados", "hours": 2},
+        # Engenheiro de Suporte — 9h
+        {"id": 7, "track": "Engenheiro de Suporte", "name": "Arquitetura de Serviços",
+         "desc": "Filas QLE, QOP, QHD e Watchdog", "hours": 3},
+        {"id": 8, "track": "Engenheiro de Suporte", "name": "Instalação e HA",
+         "desc": "Instalação, DFS Replication e alta disponibilidade", "hours": 3},
+        {"id": 9, "track": "Engenheiro de Suporte", "name": "Troubleshooting",
+         "desc": "sqlcmd, contadores de performance e logs", "hours": 3},
     ],
     "AQM": [
-        {"id": 1, "name": "AQM architecture (Mentor Server, recording, IMON)",
-         "weight": 10, "priority": "Base", "note": "Already deep in this — consolidate"},
-        {"id": 2, "name": "Users: mandatory filter by Switch + Role",
-         "weight": 10, "priority": "Base", "note": "Already confirmed in production"},
-        {"id": 3, "name": "Edit User: Agent Position ID and Switch mapping",
-         "weight": 15, "priority": "High", "note": "Next step in the ccs59crds/ccs78crds case"},
-        {"id": 4, "name": "Credential model: AD (domain) vs. AQM app admin (Set Password)",
-         "weight": 10, "priority": "Medium", "note": "Critical distinction already documented"},
-        {"id": 5, "name": "MDC (Mentor Desktop Client) — TLS / Schannel / cipher suites",
-         "weight": 20, "priority": "High", "note": "Active in current troubleshooting"},
-        {"id": 6, "name": "IMON registration flow (\"process unknown to primary server\")",
-         "weight": 15, "priority": "High", "note": "Specific error under investigation now"},
-        {"id": 7, "name": "Evaluation forms / Quality scoring (Admin Guide chapters 8-11)",
-         "weight": 10, "priority": "Low", "note": "Functional side, not just infrastructure"},
-        {"id": 8, "name": "Recording flags and retention policy",
-         "weight": 10, "priority": "Medium", "note": "Relevant for compliance in a banking environment"},
+        # Usuário — 2h
+        {"id": 1, "track": "Usuário", "name": "Desktop Client",
+         "desc": "Gravação sob demanda e autoavaliação", "hours": 2},
+        # Supervisor/Mentor — 9h
+        {"id": 2, "track": "Supervisor", "name": "Live Monitor",
+         "desc": "Monitoramento e avaliações em tempo real", "hours": 2},
+        {"id": 3, "track": "Supervisor", "name": "Scorecards",
+         "desc": "Busca, reprodução e pontuação de gravações", "hours": 3},
+        {"id": 4, "track": "Supervisor", "name": "Calibração entre Mentores",
+         "desc": "Calibração e revisão por pares", "hours": 2},
+        {"id": 5, "track": "Supervisor", "name": "Relatórios e Tendências",
+         "desc": "Relatórios e análise de tendências", "hours": 2},
+        # Administrador — 11h
+        {"id": 6, "track": "Administrador", "name": "Fundamentos e Ciclo de Vida",
+         "desc": "Planejar → gravar → revisar → reportar", "hours": 2},
+        {"id": 7, "track": "Administrador", "name": "Usuários e Acessos",
+         "desc": "Direitos e memberships — Agent/Skill Group, Team", "hours": 2},
+        {"id": 8, "track": "Administrador", "name": "Regras de Gravação",
+         "desc": "Regras de gravação e templates de scorecard", "hours": 3},
+        {"id": 9, "track": "Administrador", "name": "CMQ",
+         "desc": "Customer Measured Quality — pesquisas e convites", "hours": 2},
+        {"id": 10, "track": "Administrador", "name": "Integração AQM ↔ UIP",
+         "desc": "Sync de dados e estatísticas de gravação", "hours": 2},
+        # Engenheiro de Suporte — 10h
+        {"id": 11, "track": "Engenheiro de Suporte", "name": "Arquitetura e Config Utility",
+         "desc": "Arquitetura e Desktop Client Configuration Utility", "hours": 3},
+        {"id": 12, "track": "Engenheiro de Suporte", "name": "Instalação DTC",
+         "desc": "Instalação do Desktop Client (DTC Install)", "hours": 2},
+        {"id": 13, "track": "Engenheiro de Suporte", "name": "Troubleshooting",
+         "desc": "Storage paths, transcodificação e performance", "hours": 3},
+        {"id": 14, "track": "Engenheiro de Suporte", "name": "Manutenção e Patches",
+         "desc": "Manutenção e aplicação de hotfixes", "hours": 2},
     ],
 }
 
-PHASES = [
-    {"name": "Phase 1 — Foundation", "weight": 25,
-     "deliverable": "Consolidated architecture diagram",
-     "checklist": ["Architecture diagram drafted (UIP → ALM → AQM topology)",
-                   "Diagram validated against documented sources (not inference)"]},
-    {"name": "Phase 2 — Deep dive", "weight": 45,
-     "deliverable": "Technical notes + DEV/QA testing (one session per 15-20% item)",
-     "checklist": None},  # populated dynamically from high-weight items
-    {"name": "Phase 3 — Application", "weight": 30,
-     "deliverable": "Living documentation updated from real cases",
-     "checklist": ["PRB0068431 (HA / storage-SAN)", "URM 01607749 (certificates)",
-                   "MDC/IMON active troubleshooting", "ccs59crds/ccs78crds (Edit User mapping)"]},
-]
-
 STATUS_OPTIONS = ["Not started", "In progress", "Done"]
 STATUS_VALUE = {"Not started": 0, "In progress": 50, "Done": 100}
-PRIORITY_COLOR = {"Base": BMO_GRAY, "High": BMO_RED, "Medium": BMO_BLUE, "Low": BMO_LIGHT_BLUE}
-
-ENTRY_TYPES = ["General", "INC", "PRB", "Task"]
-TYPE_COLOR = {"General": BMO_GRAY, "INC": BMO_RED, "PRB": "#D68910", "Task": BMO_BLUE}
-TAG_OPTIONS = ["UIP", "ALM", "AQM", "Dev", "QA", "PRO"]
+STATUS_EN_TO_PT = {"Not started": "Não iniciado", "In progress": "Em andamento", "Done": "Concluído"}
+STATUS_PT_TO_EN = {v: k for k, v in STATUS_EN_TO_PT.items()}
+STATUS_OPTIONS_PT = ["Não iniciado", "Em andamento", "Concluído"]
 
 
 # ---------------------------------------------------------------------------
@@ -330,42 +353,6 @@ def set_status(platform, item_id, status):
     save_progress(st.session_state.progress)
 
 
-def checklist_key(phase_name, label):
-    return f"phase::{phase_name}::{label}"
-
-
-def get_check(phase_name, label):
-    return st.session_state.progress.get(checklist_key(phase_name, label), False)
-
-
-def set_check(phase_name, label, value):
-    st.session_state.progress[checklist_key(phase_name, label)] = value
-    save_progress(st.session_state.progress)
-
-
-def date_key(platform, item_id, which):
-    return f"date:{platform}:{item_id}:{which}"
-
-
-def get_item_date(platform, item_id, which):
-    raw = st.session_state.progress.get(date_key(platform, item_id, which))
-    if raw:
-        try:
-            return date.fromisoformat(raw)
-        except Exception:
-            return None
-    return None
-
-
-def set_item_date(platform, item_id, which, value):
-    key = date_key(platform, item_id, which)
-    if value is None:
-        st.session_state.progress.pop(key, None)
-    else:
-        st.session_state.progress[key] = value.isoformat()
-    save_progress(st.session_state.progress)
-
-
 def get_general_start():
     raw = st.session_state.progress.get("general_start")
     if raw:
@@ -379,34 +366,6 @@ def get_general_start():
 def set_general_start(value):
     st.session_state.progress["general_start"] = value.isoformat()
     save_progress(st.session_state.progress)
-
-
-def notes_key(item_key):
-    return f"notes:{item_key}"
-
-
-def get_notes(item_key):
-    return st.session_state.progress.get(notes_key(item_key), [])
-
-
-def add_note(item_key, note_date, text, note_type="General", tags=None):
-    notes = get_notes(item_key)
-    notes.append({
-        "date": note_date.isoformat() if note_date else "",
-        "text": text,
-        "type": note_type,
-        "tags": tags or [],
-    })
-    st.session_state.progress[notes_key(item_key)] = notes
-    save_progress(st.session_state.progress)
-
-
-def delete_note(item_key, idx):
-    notes = get_notes(item_key)
-    if 0 <= idx < len(notes):
-        notes.pop(idx)
-        st.session_state.progress[notes_key(item_key)] = notes
-        save_progress(st.session_state.progress)
 
 
 def get_logbook_text():
@@ -423,129 +382,54 @@ def get_logbook_updated():
     return st.session_state.progress.get("logbook_updated")
 
 
-def all_items_done():
-    for platform, items in PLATFORM_ITEMS.items():
-        for i in items:
-            if get_status(platform, i["id"]) != "Done":
-                return False
-    return True
-
-
-def general_end_date():
-    """Latest end date across all items — only meaningful once all items are Done."""
-    end_dates = []
-    for platform, items in PLATFORM_ITEMS.items():
-        for i in items:
-            d = get_item_date(platform, i["id"], "end")
-            if d:
-                end_dates.append(d)
-    return max(end_dates) if end_dates else None
-
-
 # ---------------------------------------------------------------------------
-# Calculations
+# Calculations — everything is weighted by `hours`, so there is no manual
+# percentage to keep summing to 100 anymore.
 # ---------------------------------------------------------------------------
+
+def items_by_track(platform):
+    grouped = {t: [] for t in TRACKS}
+    for i in PLATFORM_ITEMS[platform]:
+        grouped[i["track"]].append(i)
+    return grouped
+
+
+def weighted_progress(items, platform):
+    total = sum(i["hours"] for i in items)
+    if not total:
+        return 0.0
+    earned = sum(i["hours"] * STATUS_VALUE[get_status(platform, i["id"])] / 100 for i in items)
+    return round(earned / total * 100, 1)
+
 
 def platform_progress(platform):
-    items = PLATFORM_ITEMS[platform]
-    total_weight = sum(i["weight"] for i in items)
-    earned = sum(i["weight"] * STATUS_VALUE[get_status(platform, i["id"])] / 100 for i in items)
-    return round(earned / total_weight * 100, 1) if total_weight else 0.0
+    return weighted_progress(PLATFORM_ITEMS[platform], platform)
+
+
+def total_hours(platform=None):
+    if platform:
+        return sum(i["hours"] for i in PLATFORM_ITEMS[platform])
+    return sum(i["hours"] for items in PLATFORM_ITEMS.values() for i in items)
 
 
 def overall_progress():
-    total = 0.0
-    for platform, w in PLATFORM_WEIGHTS.items():
-        total += platform_progress(platform) * w / 100
-    return round(total, 1)
+    all_pairs = [(p, i) for p, items in PLATFORM_ITEMS.items() for i in items]
+    grand_total = sum(i["hours"] for p, i in all_pairs)
+    if not grand_total:
+        return 0.0
+    earned = sum(i["hours"] * STATUS_VALUE[get_status(p, i["id"])] / 100 for p, i in all_pairs)
+    return round(earned / grand_total * 100, 1)
 
 
-def high_weight_items():
-    """Items weighted 15-20% across all platforms → Phase 2 dedicated sessions."""
-    result = []
+def track_matrix():
+    """{platform: {track: (module_count, hours)}} — used by the 'Trilhas por produto' table."""
+    m = {}
     for platform, items in PLATFORM_ITEMS.items():
-        for i in items:
-            if i["weight"] >= 15:
-                result.append((platform, i))
-    return result
-
-
-def phase_progress(phase):
-    if phase["name"] == "Phase 2 — Deep dive":
-        items = high_weight_items()
-        if not items:
-            return 0.0
-        done = sum(1 for p, i in items if get_status(p, i["id"]) == "Done")
-        in_prog = sum(1 for p, i in items if get_status(p, i["id"]) == "In progress")
-        return round((done * 100 + in_prog * 50) / len(items), 1)
-    else:
-        checks = phase["checklist"]
-        if not checks:
-            return 0.0
-        done = sum(1 for c in checks if get_check(phase["name"], c))
-        return round(done / len(checks) * 100, 1)
-
-
-def overall_track_progress():
-    total = 0.0
-    for phase in PHASES:
-        total += phase_progress(phase) * phase["weight"] / 100
-    return round(total, 1)
-
-
-def render_notes_section(item_key, form_prefix):
-    notes = get_notes(item_key)
-    if notes:
-        for idx, n in enumerate(notes):
-            with st.container(border=True):
-                top = st.columns([1, 1, 3.3, 0.5])
-                with top[0]:
-                    st.caption(n.get("date") or "—")
-                with top[1]:
-                    ntype = n.get("type", "General")
-                    color = TYPE_COLOR.get(ntype, BMO_GRAY)
-                    st.markdown(
-                        f"<span class='priority-badge' style='background-color:{color}22;color:{color};'>"
-                        f"{ntype}</span>",
-                        unsafe_allow_html=True,
-                    )
-                with top[2]:
-                    tags = n.get("tags", [])
-                    if tags:
-                        st.markdown(
-                            "".join(f"<span class='tag-badge'>{t}</span>" for t in tags),
-                            unsafe_allow_html=True,
-                        )
-                with top[3]:
-                    if st.button("🗑", key=f"del_{form_prefix}_{idx}"):
-                        delete_note(item_key, idx)
-                        st.rerun()
-                st.write(n.get("text", ""))
-    else:
-        st.caption("No experience or case notes logged yet.")
-
-    with st.form(key=f"form_{form_prefix}", clear_on_submit=True):
-        fcols = st.columns([1, 1, 3, 1.5])
-        with fcols[0]:
-            note_date = st.date_input("Date", value=date.today(), key=f"date_{form_prefix}",
-                                       label_visibility="collapsed")
-        with fcols[1]:
-            note_type = st.selectbox("Type", ENTRY_TYPES, key=f"type_{form_prefix}",
-                                      label_visibility="collapsed")
-        with fcols[2]:
-            note_text = st.text_input(
-                "Note", key=f"text_{form_prefix}", label_visibility="collapsed",
-                placeholder="Case, ticket #, or hands-on experience related to this topic...",
-            )
-        with fcols[3]:
-            note_tags = st.multiselect(
-                "Tags", TAG_OPTIONS, key=f"tags_{form_prefix}", label_visibility="collapsed",
-                placeholder="Tags",
-            )
-        submitted = st.form_submit_button("Add entry")
-        if submitted and note_text.strip():
-            add_note(item_key, note_date, note_text.strip(), note_type, note_tags)
-            st.rerun()
+        m[platform] = {}
+        for t in TRACKS:
+            sub = [i for i in items if i["track"] == t]
+            m[platform][t] = (len(sub), sum(i["hours"] for i in sub))
+    return m
 
 
 def kpi_tile(label, value, bg_color, text_color="#FFFFFF"):
@@ -588,56 +472,46 @@ def make_gauge(value, title, bar_color="#FFFFFF", bg_color=BMO_BLUE_DARK):
 # ---------------------------------------------------------------------------
 
 def render_platform_tab(platform):
-    items = PLATFORM_ITEMS[platform]
     prog = platform_progress(platform)
-    st.subheader(f"{platform} — {PLATFORM_WEIGHTS[platform]}% of overall track")
-    st.progress(prog / 100, text=f"{prog}% complete")
+    p_hours = total_hours(platform)
+    grand_total = total_hours()
+    share = round(p_hours / grand_total * 100, 1) if grand_total else 0.0
 
-    for i in items:
-        with st.container(border=True):
-            st.markdown(f"<div class='item-name'>{i['id']}. {i['name']}</div>", unsafe_allow_html=True)
-            st.caption(i["note"])
+    st.subheader(f"{platform} — {p_hours}h ({share}% do treinamento total)")
+    st.progress(prog / 100, text=f"{prog}% concluído")
 
-            ccols = st.columns([1, 1.1, 1.8, 1.3, 1.3])
-            with ccols[0]:
-                st.markdown("<span class='col-header'>Weight</span>", unsafe_allow_html=True)
-                st.markdown(f"<span class='item-weight'>{i['weight']}%</span>", unsafe_allow_html=True)
-            with ccols[1]:
-                st.markdown("<span class='col-header'>Priority</span>", unsafe_allow_html=True)
-                color = PRIORITY_COLOR.get(i["priority"], "#999")
-                st.markdown(
-                    f"<span class='priority-badge' style='background-color:{color}22;color:{color};'>"
-                    f"{i['priority']}</span>",
-                    unsafe_allow_html=True,
-                )
-            with ccols[2]:
-                st.markdown("<span class='col-header'>Status</span>", unsafe_allow_html=True)
-                current = get_status(platform, i["id"])
-                new_status = st.selectbox(
-                    "Status", STATUS_OPTIONS, index=STATUS_OPTIONS.index(current),
-                    key=f"sel_{platform}_{i['id']}", label_visibility="collapsed",
-                )
-                if new_status != current:
-                    set_status(platform, i["id"], new_status)
-                    st.rerun()
-            with ccols[3]:
-                st.markdown("<span class='col-header'>Start date</span>", unsafe_allow_html=True)
-                cur_start = get_item_date(platform, i["id"], "start")
-                new_start = st.date_input(
-                    "Start", value=cur_start, key=f"start_{platform}_{i['id']}",
-                    label_visibility="collapsed",
-                )
-                if new_start != cur_start:
-                    set_item_date(platform, i["id"], "start", new_start)
-            with ccols[4]:
-                st.markdown("<span class='col-header'>End date</span>", unsafe_allow_html=True)
-                cur_end = get_item_date(platform, i["id"], "end")
-                new_end = st.date_input(
-                    "End", value=cur_end, key=f"end_{platform}_{i['id']}",
-                    label_visibility="collapsed",
-                )
-                if new_end != cur_end:
-                    set_item_date(platform, i["id"], "end", new_end)
+    grouped = items_by_track(platform)
+    for track in TRACKS:
+        t_items = grouped.get(track, [])
+        if not t_items:
+            continue
+        t_hours = sum(i["hours"] for i in t_items)
+        t_prog = weighted_progress(t_items, platform)
+
+        st.markdown(f"<div class='progress-title' style='margin-top:1.1rem;'>{track}</div>", unsafe_allow_html=True)
+        st.caption(f"{len(t_items)} módulos · {t_hours}h")
+        st.progress(t_prog / 100, text=f"{t_prog}%")
+
+        for i in t_items:
+            with st.container(border=True):
+                ccols = st.columns([3, 2])
+                with ccols[0]:
+                    st.markdown(f"<div class='item-name'>{i['name']}</div>", unsafe_allow_html=True)
+                    st.caption(i["desc"])
+                with ccols[1]:
+                    st.markdown(
+                        f"<div style='text-align:right;'><span class='item-weight'>{i['hours']}h</span></div>",
+                        unsafe_allow_html=True,
+                    )
+                    current_en = get_status(platform, i["id"])
+                    current_pt = STATUS_EN_TO_PT[current_en]
+                    new_pt = st.select_slider(
+                        "Status", options=STATUS_OPTIONS_PT, value=current_pt,
+                        key=f"stat_{platform}_{i['id']}", label_visibility="collapsed",
+                    )
+                    if new_pt != current_pt:
+                        set_status(platform, i["id"], STATUS_PT_TO_EN[new_pt])
+                        st.rerun()
 
 
 # ---------------------------------------------------------------------------
@@ -647,13 +521,18 @@ def render_platform_tab(platform):
 st.title("UIP · ALM · AQM — Training Track Dashboard")
 st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio — Technical Support")
 
-tab_overview, tab_uip, tab_alm, tab_aqm, tab_phases = st.tabs(
+tab_overview, tab_uip, tab_alm, tab_aqm, tab_logbook = st.tabs(
     ["Overview", "UIP", "ALM", "AQM", "Logbook_staging"]
 )
 
 with tab_overview:
     overall = overall_progress()
-    track = overall_track_progress()
+
+    # First time the whole track hits 100%, freeze that date as "general end".
+    if overall >= 100 and not st.session_state.progress.get("general_end"):
+        st.session_state.progress["general_end"] = date.today().isoformat()
+        save_progress(st.session_state.progress)
+    general_end_raw = st.session_state.progress.get("general_end")
 
     with st.container(border=True):
         gcol1, gcol2, gcol3 = st.columns([1, 1, 2])
@@ -665,8 +544,8 @@ with tab_overview:
                 set_general_start(g_start)
         with gcol2:
             st.markdown("<span class='col-header'>General end</span>", unsafe_allow_html=True)
-            if all_items_done() and general_end_date():
-                g_end = general_end_date()
+            if general_end_raw:
+                g_end = date.fromisoformat(general_end_raw)
                 st.markdown(
                     f"<span style='font-size:1rem;font-weight:700;'>{g_end.strftime('%b %d, %Y')}</span> "
                     f"<span class='status-badge status-completed'>COMPLETED</span>",
@@ -680,29 +559,25 @@ with tab_overview:
                 )
         with gcol3:
             st.caption(
-                "General end auto-fills with the latest item end date once every "
-                "item across UIP / ALM / AQM is marked Done."
+                "General end auto-fills the first time the whole track (all products, "
+                "weighted by hours) reaches 100%."
             )
 
     k1, k2, k3, k4 = st.columns(4)
     with k1:
-        st.markdown(kpi_tile("Overall (platform weight)", f"{overall}%", BMO_BLUE_DARK), unsafe_allow_html=True)
+        st.markdown(kpi_tile("Overall", f"{overall}%", BMO_BLUE_DARK), unsafe_allow_html=True)
     with k2:
-        st.markdown(kpi_tile("Overall (phase weight)", f"{track}%", BMO_RED_DEEP), unsafe_allow_html=True)
-    with k3:
         st.markdown(kpi_tile("UIP", f"{platform_progress('UIP')}%", BMO_BLUE), unsafe_allow_html=True)
+    with k3:
+        st.markdown(kpi_tile("ALM", f"{platform_progress('ALM')}%", BMO_GRAY_DEEP), unsafe_allow_html=True)
     with k4:
-        st.markdown(
-            kpi_tile("ALM / AQM", f"{platform_progress('ALM')}% / {platform_progress('AQM')}%", BMO_GRAY_DEEP),
-            unsafe_allow_html=True,
-        )
+        st.markdown(kpi_tile("AQM", f"{platform_progress('AQM')}%", BMO_RED_DEEP), unsafe_allow_html=True)
 
-    pcol, phcol = st.columns(2)
-    with pcol, st.container(border=True):
+    with st.container(border=True):
         st.markdown("<div class='progress-card-marker'></div>", unsafe_allow_html=True)
         st.markdown("<div class='progress-title'>Progress by platform</div>", unsafe_allow_html=True)
         gcols = st.columns(3)
-        for gc, (platform, w) in zip(gcols, PLATFORM_WEIGHTS.items()):
+        for gc, platform in zip(gcols, PLATFORM_ITEMS.keys()):
             p = platform_progress(platform)
             with gc:
                 st.plotly_chart(
@@ -711,37 +586,61 @@ with tab_overview:
                     config={"displayModeBar": False},
                     key=f"gauge_platform_{platform}",
                 )
-    with phcol, st.container(border=True):
-        st.markdown("<div class='progress-card-marker'></div>", unsafe_allow_html=True)
-        st.markdown("<div class='progress-title'>Progress by phase</div>", unsafe_allow_html=True)
-        gcols = st.columns(3)
-        for gc, phase in zip(gcols, PHASES):
-            p = phase_progress(phase)
-            short_name = phase["name"].split("—")[-1].strip()
-            with gc:
-                st.plotly_chart(
-                    make_gauge(p, short_name, bar_color="#FFFFFF", bg_color=BMO_RED_DEEP),
-                    use_container_width=True,
-                    config={"displayModeBar": False},
-                    key=f"gauge_phase_{phase['name']}",
-                )
 
     st.markdown(
         f"""
         <div style='background-color:{BMO_BLUE_DARK};padding:1.2rem 1.5rem;
                     border-radius:8px;box-shadow:0 2px 5px rgba(0,0,0,0.15);margin-bottom:1.3rem;'>
             <div style='color:#FFFFFF;font-size:1.05rem;font-weight:700;margin-bottom:0.7rem;'>Topology</div>
-            <div style='color:#EAF4FB;font-family:Consolas,monospace;font-size:0.88rem;line-height:1.8;'>
-                UIP (Core) → AOD Interface → ALM (Dialing/Lists)<br>
-                UIP (Core) → Switch/Agent Position → AQM (Recording/Quality)
+            <div style='color:#EAF4FB;font-family:Consolas,monospace;font-size:0.85rem;line-height:1.75;white-space:pre;'>
+      Outbound ──►  ┌─────────────┐  ◄── Gravação / Qualidade
+        (ALM)       │     UIP     │        (AQM)
+                     │ ACD·IVR·Rot.│
+                     └─────────────┘
+                            │
+                Voz · Chat · Callback
+                            │
+                      Agente / Cliente
             </div>
-            <div style='color:#EAF4FB;font-size:0.82rem;margin-top:0.8rem;opacity:0.85;'>
-                UIP is the foundation for the other two systems — starting point of the track.
+            <div style='color:#EAF4FB;font-size:0.85rem;margin-top:0.9rem;line-height:1.55;opacity:0.92;'>
+                UIP é a plataforma central (ACD, roteamento, IVR/M3, chat, callback). ALM injeta contatos
+                outbound nas filas do UIP; AQM escuta as chamadas que passam pelo UIP para gravar e avaliar.
+                Ordem recomendada: <b>UIP primeiro</b>, depois ALM/AQM em paralelo. Dentro de cada produto,
+                a profundidade sobe: Usuário → Supervisor → Administrador → Engenheiro de Suporte.
             </div>
         </div>
         """,
         unsafe_allow_html=True,
     )
+
+    with st.container(border=True):
+        st.markdown("<div class='progress-title'>Trilhas por produto</div>", unsafe_allow_html=True)
+        m = track_matrix()
+        header_cells = "".join(
+            f"<th style='padding:8px 10px;text-align:center;color:{BMO_GRAY};text-transform:uppercase;"
+            f"font-size:0.72rem;letter-spacing:0.03em;'>{t}</th>"
+            for t in TRACKS
+        )
+        rows_html = ""
+        for platform in PLATFORM_ITEMS:
+            cells = "".join(
+                f"<td style='padding:8px 10px;text-align:center;'>{m[platform][t][1]}h "
+                f"<span style='color:{BMO_GRAY};font-size:0.76rem;'>({m[platform][t][0]}m)</span></td>"
+                for t in TRACKS
+            )
+            rows_html += (
+                f"<tr><td style='padding:8px 10px;font-weight:700;color:{BMO_BLUE_DARK};'>{platform}</td>"
+                f"{cells}</tr>"
+            )
+        st.markdown(
+            f"""
+            <table style='width:100%;border-collapse:collapse;'>
+                <thead><tr><th></th>{header_cells}</tr></thead>
+                <tbody>{rows_html}</tbody>
+            </table>
+            """,
+            unsafe_allow_html=True,
+        )
 
 with tab_uip:
     render_platform_tab("UIP")
@@ -752,7 +651,7 @@ with tab_alm:
 with tab_aqm:
     render_platform_tab("AQM")
 
-with tab_phases:
+with tab_logbook:
     with st.container(border=True):
         top = st.columns([3, 1])
         with top[0]:
