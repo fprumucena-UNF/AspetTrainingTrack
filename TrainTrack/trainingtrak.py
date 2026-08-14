@@ -126,6 +126,21 @@ st.markdown(
     }}
     .status-pending {{ background-color: {BMO_GRAY}22; color: {BMO_GRAY}; }}
     .status-completed {{ background-color: {BMO_RED}22; color: {BMO_RED}; }}
+    /* Priority badges — Focus vs Deprioritize, per Mike's 2026-08-14 guidance.
+       Small pill next to the module name, same visual language as the
+       status badges above. Does not affect progress math or stored keys. */
+    .priority-badge {{
+        display: inline-block;
+        font-size: 0.72rem !important;
+        font-weight: 700 !important;
+        padding: 2px 9px !important;
+        border-radius: 8px !important;
+        letter-spacing: 0.02em;
+        margin-left: 6px;
+        vertical-align: middle;
+    }}
+    .priority-focus {{ background-color: #1B873F22; color: #1B873F; }}
+    .priority-later {{ background-color: {BMO_GRAY}22; color: {BMO_GRAY}; }}
     /* Column header strip */
     .col-header {{
         font-size: 0.82rem !important;
@@ -225,6 +240,12 @@ GENERAL_START_DEFAULT = date(2026, 8, 1)
 # a short desc (shown smaller/lighter under the name), and hours.
 # There is no manual "weight" to keep in sync anymore — progress is
 # weighted by `hours` automatically, so nothing can drift out of 100%.
+#
+# Optional `priority` field ("focus" / "deprioritize", omitted = neutral):
+# added 2026-08-14 from Mike Freed's stakeholder guidance on where to spend
+# time first within the existing curriculum. Purely a display/ordering hint
+# — it does not touch item `id`, does not add/remove modules, and does not
+# affect the hours-weighted progress math or stored progress.json keys.
 # ---------------------------------------------------------------------------
 
 TRACKS = ["User", "Supervisor", "Administrator", "Support Engineer"]
@@ -233,11 +254,13 @@ PLATFORM_ITEMS = {
     "UIP": [
         # User — 7h
         {"id": 1, "track": "User", "name": "Agent Interface",
-         "desc": "Login, status, transfer and conference calls", "hours": 2},
+         "desc": "Login, status, transfer and conference calls", "hours": 2,
+         "priority": "focus"},
         {"id": 2, "track": "User", "name": "Multichannel Support",
          "desc": "Voice, chat and callback in a single interaction flow", "hours": 3},
         {"id": 3, "track": "User", "name": "Unified Director",
-         "desc": "Day-to-day use of the agent softphone", "hours": 2},
+         "desc": "Day-to-day use of the agent softphone", "hours": 2,
+         "priority": "focus"},
         # Supervisor — 8h
         {"id": 4, "track": "Supervisor", "name": "URM Dashboard",
          "desc": "Real-time panel — queues, agents and SLAs", "hours": 3},
@@ -251,24 +274,30 @@ PLATFORM_ITEMS = {
         {"id": 8, "track": "Administrator", "name": "Routing (ACD)",
          "desc": "ACD configuration and dial plans", "hours": 3},
         {"id": 9, "track": "Administrator", "name": "M3 Designer — Fundamentals",
-         "desc": "IVR fundamentals with M3 Designer", "hours": 3},
+         "desc": "IVR fundamentals with M3 Designer", "hours": 3,
+         "priority": "deprioritize"},
         {"id": 10, "track": "Administrator", "name": "M3 Advanced",
-         "desc": "Multi-document scripts and database integration", "hours": 3},
+         "desc": "Multi-document scripts and database integration", "hours": 3,
+         "priority": "deprioritize"},
         {"id": 11, "track": "Administrator", "name": "Chat and Web Callback",
-         "desc": "Configuring chat and web callback channels", "hours": 2},
+         "desc": "Configuring chat and web callback channels", "hours": 2,
+         "priority": "deprioritize"},
         {"id": 12, "track": "Administrator", "name": "Enterprise Routing",
          "desc": "IPNIQ, Broker and cross-site routing", "hours": 3},
         {"id": 13, "track": "Administrator", "name": "UCC-Admin and URM",
          "desc": "Administration via UCC-Admin and Unified Resource Manager", "hours": 3},
         {"id": 14, "track": "Administrator", "name": "Security and Licensing",
-         "desc": "Security, licensing and user management", "hours": 2},
+         "desc": "Security, licensing and user management", "hours": 2,
+         "priority": "deprioritize"},
         # Support Engineer — 17h
         {"id": 15, "track": "Support Engineer", "name": "Infrastructure and Network",
          "desc": "UIP infrastructure and network architecture", "hours": 3},
         {"id": 16, "track": "Support Engineer", "name": "Installation",
-         "desc": "Installation and use of the Server Configurator", "hours": 3},
+         "desc": "Installation and use of the Server Configurator", "hours": 3,
+         "priority": "deprioritize"},
         {"id": 17, "track": "Support Engineer", "name": "Upgrade Process",
-         "desc": "Upgrade prerequisites and troubleshooting", "hours": 3},
+         "desc": "Upgrade prerequisites and troubleshooting", "hours": 3,
+         "priority": "deprioritize"},
         {"id": 18, "track": "Support Engineer", "name": "Diagnostics",
          "desc": "Logs, Performance Monitor and network tools", "hours": 3},
         {"id": 19, "track": "Support Engineer", "name": "HA and DR/Failover",
@@ -279,24 +308,28 @@ PLATFORM_ITEMS = {
     "ALM": [
         # User — 2h
         {"id": 1, "track": "User", "name": "Outbound Operation",
-         "desc": "Contacts and dispositions in outbound campaigns", "hours": 2},
+         "desc": "Contacts and dispositions in outbound campaigns", "hours": 2,
+         "priority": "focus"},
         # Supervisor — 4h
         {"id": 2, "track": "Supervisor", "name": "Real-Time Monitoring",
          "desc": "CPS and queues for outbound campaigns", "hours": 2},
         {"id": 3, "track": "Supervisor", "name": "List Management",
-         "desc": "Contact lists and disposition rules", "hours": 2},
+         "desc": "Contact lists and disposition rules", "hours": 2,
+         "priority": "focus"},
         # Administrator — 8h
         {"id": 4, "track": "Administrator", "name": "Campaign Concepts",
          "desc": "Lists, dialers and Optimizer", "hours": 3},
         {"id": 5, "track": "Administrator", "name": "Campaign Configuration",
          "desc": "Contact rules and DNC compliance", "hours": 3},
         {"id": 6, "track": "Administrator", "name": "ALM ↔ UIP Integration",
-         "desc": "Integration with UIP and databases", "hours": 2},
+         "desc": "Integration with UIP and databases", "hours": 2,
+         "priority": "focus"},
         # Support Engineer — 9h
         {"id": 7, "track": "Support Engineer", "name": "Service Architecture",
          "desc": "QLE, QOP, QHD queues and Watchdog", "hours": 3},
         {"id": 8, "track": "Support Engineer", "name": "Installation and HA",
-         "desc": "Installation, DFS Replication and high availability", "hours": 3},
+         "desc": "Installation, DFS Replication and high availability", "hours": 3,
+         "priority": "deprioritize"},
         {"id": 9, "track": "Support Engineer", "name": "Troubleshooting",
          "desc": "sqlcmd, performance counters and logs", "hours": 3},
     ],
@@ -306,24 +339,29 @@ PLATFORM_ITEMS = {
          "desc": "On-demand recording and self-evaluation", "hours": 2},
         # Supervisor/Mentor — 9h
         {"id": 2, "track": "Supervisor", "name": "Live Monitor",
-         "desc": "Real-time monitoring and evaluation creation", "hours": 2},
+         "desc": "Real-time monitoring and evaluation creation", "hours": 2,
+         "priority": "focus"},
         {"id": 3, "track": "Supervisor", "name": "Scorecards",
          "desc": "Searching, playback and scoring of recordings", "hours": 3},
         {"id": 4, "track": "Supervisor", "name": "Mentor Calibration",
          "desc": "Calibration and peer review", "hours": 2},
         {"id": 5, "track": "Supervisor", "name": "Reports and Trends",
-         "desc": "Reports and trend analysis", "hours": 2},
+         "desc": "Reports and trend analysis", "hours": 2,
+         "priority": "deprioritize"},
         # Administrator — 11h
         {"id": 6, "track": "Administrator", "name": "Fundamentals and Lifecycle",
-         "desc": "Plan → record → review → report", "hours": 2},
+         "desc": "Plan → record → review → report", "hours": 2,
+         "priority": "focus"},
         {"id": 7, "track": "Administrator", "name": "Users and Access",
-         "desc": "Rights and memberships — Agent/Skill Group, Team", "hours": 2},
+         "desc": "Rights and memberships — Agent/Skill Group, Team", "hours": 2,
+         "priority": "focus"},
         {"id": 8, "track": "Administrator", "name": "Recording Rules",
          "desc": "Recording rules and scorecard templates", "hours": 3},
         {"id": 9, "track": "Administrator", "name": "CMQ",
          "desc": "Customer Measured Quality — surveys and invitation rules", "hours": 2},
         {"id": 10, "track": "Administrator", "name": "AQM ↔ UIP Integration",
-         "desc": "Data sync and recording statistics", "hours": 2},
+         "desc": "Data sync and recording statistics", "hours": 2,
+         "priority": "focus"},
         # Support Engineer — 10h
         {"id": 11, "track": "Support Engineer", "name": "Architecture and Config Utility",
          "desc": "Architecture and Desktop Client Configuration Utility", "hours": 3},
@@ -332,11 +370,26 @@ PLATFORM_ITEMS = {
         {"id": 13, "track": "Support Engineer", "name": "Troubleshooting",
          "desc": "Storage paths, transcoding and performance", "hours": 3},
         {"id": 14, "track": "Support Engineer", "name": "Maintenance and Patches",
-         "desc": "Maintenance and hotfix application", "hours": 2},
+         "desc": "Maintenance and hotfix application", "hours": 2,
+         "priority": "deprioritize"},
     ],
 }
 
 STATUS_VALUE = {"Not started": 0, "In progress": 50, "Done": 100}
+
+# Sort order for priority tags within a track: Focus first, neutral (no tag)
+# in the middle, Deprioritize last. Python's sort is stable, so modules
+# sharing a priority keep their original curriculum order among themselves.
+PRIORITY_RANK = {"focus": 0, "deprioritize": 2}
+PRIORITY_BADGE = {
+    "focus": ("Priority", "priority-focus"),
+    "deprioritize": ("Later", "priority-later"),
+}
+
+
+def sort_by_priority(items):
+    return sorted(items, key=lambda i: PRIORITY_RANK.get(i.get("priority"), 1))
+
 
 # ---------------------------------------------------------------------------
 # Verint Academy — data pulled from the Cornerstone/Verint LMS dashboard.
@@ -622,7 +675,15 @@ def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, pe
         for col, i in zip(cols, row_items):
             with col:
                 with st.container(border=True):
-                    st.markdown(f"<div class='item-name'>{i['name']}</div>", unsafe_allow_html=True)
+                    badge_html = ""
+                    priority = i.get("priority")
+                    if priority in PRIORITY_BADGE:
+                        label, css_class = PRIORITY_BADGE[priority]
+                        badge_html = f"<span class='priority-badge {css_class}'>{label}</span>"
+                    st.markdown(
+                        f"<div class='item-name'>{i['name']}{badge_html}</div>",
+                        unsafe_allow_html=True,
+                    )
                     caption = i["desc"]
                     if i.get("hours") and hours_fmt:
                         caption = f"{caption} · {hours_fmt(i['hours'])}"
@@ -660,7 +721,7 @@ def render_platform_tab(platform):
         st.progress(t_prog / 100, text=f"{t_prog}%")
 
         render_module_grid(
-            t_items,
+            sort_by_priority(t_items),
             get_done=lambda i: get_status(platform, i["id"]) == "Done",
             set_done=lambda i, v: set_status(platform, i["id"], "Done" if v else "Not started"),
             key_prefix=f"stat_{platform}",
@@ -705,7 +766,9 @@ with st.sidebar:
     st.markdown("---")
     st.markdown("### Backup")
     st.caption(
-        "Progress json file for backup"
+        "Progress lives on this app's own server disk, not in GitHub. Download a "
+        "copy here before pushing new code or redeploying — a redeploy resets this "
+        "app's disk to whatever is currently committed in the repo."
     )
     st.download_button(
         "Download progress.json",
