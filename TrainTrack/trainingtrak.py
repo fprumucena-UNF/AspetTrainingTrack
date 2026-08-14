@@ -169,6 +169,20 @@ st.markdown(
         color: {BMO_BLUE_DARK} !important;
         margin: 0 0 0.3rem 0 !important;
     }}
+    /* Section-header badge — same visual language as the tab labels above
+       (solid BMO navy pill, bold white text) so section titles like
+       "Progress" read as a matching part of the same design system. */
+    .section-badge {{
+        display: inline-block;
+        font-size: 1.35rem !important;
+        font-weight: 800 !important;
+        letter-spacing: 0.02em;
+        color: #FFFFFF !important;
+        background-color: {BMO_BLUE_DARK};
+        padding: 8px 22px;
+        border-radius: 8px;
+        margin: 0 0 1.3rem 0 !important;
+    }}
     .progress-label {{
         font-size: 0.95rem !important;
         color: #333333 !important;
@@ -744,7 +758,7 @@ with tab_overview:
     with st.container(border=True):
         st.markdown("<div class='progress-card-marker'></div>", unsafe_allow_html=True)
         st.markdown(
-            "<div class='progress-title' style='font-size:1.55rem; margin-bottom:1rem;'>Progress</div>",
+            "<div class='section-badge'>Progress</div>",
             unsafe_allow_html=True,
         )
         gauges = [
