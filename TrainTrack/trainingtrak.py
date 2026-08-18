@@ -8,7 +8,7 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 import plotly.graph_objects as go
 
-# Toronto .CA local time — used for every "last saved/edited" timestamp shown in
+# Toronto local time — used for every "last saved/edited" timestamp shown in
 # the UI. America/Toronto auto-switches EST/EDT with daylight saving, and
 # %Z prints whichever one is currently in effect.
 TORONTO_TZ = ZoneInfo("America/Toronto")
@@ -145,6 +145,7 @@ st.markdown(
     .priority-focus {{ background-color: #1B873F22; color: #1B873F; }}
     .priority-later {{ background-color: {BMO_GRAY}22; color: {BMO_GRAY}; }}
     .done-badge {{ background-color: #0F7A3826; color: #0F7A38; }}
+    .discontinued-badge {{ background-color: {BMO_RED_DEEP}26; color: {BMO_RED_DEEP}; }}
     /* Completed module cards — stronger fill + accent border when the Done
        toggle is on, using the same "hidden marker div + :has()" trick as
        the Progress card below (Streamlit gives no direct way to style a
@@ -161,6 +162,17 @@ st.markdown(
         background-color: #D2F2DF !important;
         border: 2px solid #0F7A38 !important;
         border-left: 6px solid #0F7A38 !important;
+    }}
+    /* Discontinued module cards — modules marked "not needed" (curriculum
+       decision, not a training gap). Deliberately red instead of green so
+       it never reads as "trained," even though it counts as complete in
+       the progress math. Same marker + :has() trick, same fill/contrast
+       approach as the Done card above (#FCE3E4 keeps caption text at
+       ~3.85:1 contrast, matching the ~3.9:1 the green version already uses). */
+    [data-testid="stVerticalBlock"]:has(> [data-testid="stElementContainer"] .card-discontinued-marker) {{
+        background-color: #FCE3E4 !important;
+        border: 2px solid {BMO_RED_DEEP} !important;
+        border-left: 6px solid {BMO_RED_DEEP} !important;
     }}
     /* Logbook sort buttons — whichever direction (Oldest/Newest first) was
        last clicked stays filled in, same marker + :has() trick again, this
@@ -354,7 +366,14 @@ PLATFORM_ITEMS = {
         {"id": 19, "track": "Support Engineer", "name": "HA and DR/Failover",
          "desc": "High availability and disaster recovery/failover", "hours": 2},
         {"id": 20, "track": "Support Engineer", "name": "Enterprise Integration",
-         "desc": "Integrated view of UIP + ALM + AQM + UCC-Admin", "hours": 3},
+         "desc": "Integrated view of UIP + ALM + AQM + UCC-Admin", "hours": 3,
+         # Marked discontinued 2026-08-18 — not needed for this engagement.
+         # Counts as complete in the progress math (see get_status) and
+         # renders with the red "Discontinued" treatment below instead of
+         # the normal green Done styling, so it reads clearly as "excluded
+         # by decision," not "actually trained." Toggle is force-disabled
+         # since this isn't a per-session choice — it's a curriculum change.
+         "discontinued": True},
     ],
     "ALM": [
         # User — 2h
@@ -730,6 +749,13 @@ def item_key(platform, item_id):
 
 
 def get_status(platform, item_id):
+    # Discontinued modules always count as complete in the progress math —
+    # driven straight off the static curriculum data (PLATFORM_ITEMS), not
+    # off anything saved in progress.json, so it can't drift out of sync
+    # and doesn't need a data migration to take effect.
+    item = next((it for it in PLATFORM_ITEMS[platform] if it["id"] == item_id), None)
+    if item and item.get("discontinued"):
+        return "Done"
     return st.session_state.progress.get(item_key(platform, item_id), "Not started")
 
 
@@ -918,15 +944,23 @@ def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, pe
         for col, i in zip(cols, row_items):
             with col:
                 with st.container(border=True):
-                    current_done = get_done(i)
-                    if current_done:
+                    discontinued = i.get("discontinued", False)
+                    # Discontinued always displays as complete — forced, not
+                    # read from the toggle — since it's a curriculum decision,
+                    # not something a user can opt in/out of per session.
+                    current_done = True if discontinued else get_done(i)
+                    if discontinued:
+                        st.markdown("<div class='card-discontinued-marker'></div>", unsafe_allow_html=True)
+                    elif current_done:
                         st.markdown("<div class='card-done-marker'></div>", unsafe_allow_html=True)
                     badge_html = ""
                     priority = i.get("priority")
-                    if priority in PRIORITY_BADGE:
+                    if priority in PRIORITY_BADGE and not discontinued:
                         label, css_class = PRIORITY_BADGE[priority]
                         badge_html += f"<span class='priority-badge {css_class}'>{label}</span>"
-                    if current_done:
+                    if discontinued:
+                        badge_html += "<span class='priority-badge discontinued-badge'>⛔ Discontinued — Not Required</span>"
+                    elif current_done:
                         # Text + checkmark alongside the fill, not just color —
                         # so the "done" state still reads clearly for anyone
                         # who can't distinguish the green tint (color-blind
@@ -943,9 +977,9 @@ def render_module_grid(items, get_done, set_done, key_prefix, hours_fmt=None, pe
                     new_done = st.toggle(
                         "Done", value=current_done,
                         key=f"{key_prefix}_{i['id']}", label_visibility="collapsed",
-                        disabled=not EDIT_UNLOCKED,
+                        disabled=not EDIT_UNLOCKED or discontinued,
                     )
-                    if new_done != current_done:
+                    if not discontinued and new_done != current_done:
                         set_done(i, new_done)
                         st.rerun()
 
