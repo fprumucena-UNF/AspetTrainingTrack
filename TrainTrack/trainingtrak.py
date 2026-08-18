@@ -2,11 +2,13 @@ import streamlit as st
 import json
 import os
 import re
+import base64
+import requests
 from datetime import datetime, date
 from zoneinfo import ZoneInfo
 import plotly.graph_objects as go
 
-# Toronto local time — used for every "last saved/edited" timestamp shown in
+# Toronto CA local time — used for every "last saved/edited" timestamp shown in
 # the UI. America/Toronto auto-switches EST/EDT with daylight saving, and
 # %Z prints whichever one is currently in effect.
 TORONTO_TZ = ZoneInfo("America/Toronto")
@@ -536,9 +538,162 @@ VERINT_HOURS_WEIGHTED = {"WFO 15 Enterprise User Management"}
 
 # ---------------------------------------------------------------------------
 # Persistence
+#
+# Added 2026-08-14: Streamlit Community Cloud's disk is ephemeral — when an
+# app sleeps from inactivity and wakes back up, or gets redeployed, its disk
+# resets to whatever's committed in the repo. progress.json is (deliberately)
+# gitignored, so every reboot was wiping it. Local runs never had this
+# problem (a normal file on Fabio's own machine survives fine); only the two
+# Streamlit Cloud deployments did.
+#
+# Fix: the `staging` app now also commits progress.json straight to GitHub
+# on every save, via the Contents API — so a reboot picks the latest state
+# back up from git instead of an empty disk. The `main` app (the read-only
+# link shared with Fabio's manager) never writes; it just reads whatever is
+# currently on the `main` branch. It only gets new data when Fabio
+# deliberately clicks "Publish to main" in the staging app's sidebar — so
+# staging can autosave every click without the manager's view jumping
+# around live. See training_track_documentation.md for the full design
+# writeup (once that's synced — Fabio asked to hold off on doc updates for
+# now).
+#
+# Three optional Streamlit secrets drive this, checked once at startup:
+#   github_repo   = "owner/reponame"   required for ANY GitHub sync
+#   github_branch = "staging"          which branch *this* deployment reads/
+#                                       writes day-to-day (main app should
+#                                       set this to "main"; defaults to
+#                                       "main" if unset)
+#   github_token  = "ghp_..."          required to WRITE (a fine-grained PAT
+#                                       scoped to just this repo, Contents:
+#                                       read+write). Reading is done via
+#                                       raw.githubusercontent.com, which
+#                                       needs no token since the repo is
+#                                       public — so the `main` app doesn't
+#                                       need a token at all, only staging.
+#
+# None of this is required to run the app at all — with no github_repo
+# secret configured (e.g. local dev), everything silently falls back to the
+# original local-file-only behavior.
 # ---------------------------------------------------------------------------
 
+try:
+    GITHUB_REPO = st.secrets.get("github_repo")      # "owner/reponame"
+    GITHUB_BRANCH = st.secrets.get("github_branch", "main")
+    GITHUB_TOKEN = st.secrets.get("github_token")    # only needed to write
+    # Path to progress.json *within the repo* — defaults to the repo root,
+    # but Fabio's repo keeps the whole app inside a TrainTrack/ subfolder
+    # (confirmed 2026-08-18 from the Streamlit Cloud deploy log: "main
+    # module: 'TrainTrack/trainingtrak.py'"), so his secrets need
+    # github_path = "TrainTrack/progress.json" — otherwise writes land at
+    # the repo root (a file the app never reads) while reads 404 against
+    # the real TrainTrack/progress.json, with no error surfaced either way.
+    GITHUB_PATH = st.secrets.get("github_path", "progress.json")
+except Exception:
+    GITHUB_REPO = None
+    GITHUB_BRANCH = "main"
+    GITHUB_TOKEN = None
+    GITHUB_PATH = "progress.json"
+
+GITHUB_SYNC_ENABLED = bool(GITHUB_REPO)
+GITHUB_CAN_WRITE = bool(GITHUB_REPO and GITHUB_TOKEN)
+GITHUB_CONTENTS_URL = (
+    f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}" if GITHUB_REPO else None
+)
+
+
+def github_read_progress(branch):
+    """Reads progress.json's current content straight off GitHub's public
+    raw-content CDN for the given branch — a plain HTTPS GET, no API call,
+    no auth needed (the repo is public), so this works even on the `main`
+    deployment which has no github_token configured at all.
+
+    raw.githubusercontent.com sits behind a CDN that caches responses for a
+    few minutes, so without the cache-busting query param below, a freshly
+    published commit can still serve the *previous* content for a little
+    while after a refresh — this is what made a real "Publish to main"
+    briefly look like it hadn't worked when tested on 2026-08-14."""
+    if not GITHUB_REPO:
+        return None
+    cache_bust = int(datetime.now().timestamp())
+    url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{branch}/{GITHUB_PATH}?_={cache_bust}"
+    try:
+        resp = requests.get(url, timeout=8, headers={"Cache-Control": "no-cache"})
+        if resp.status_code == 200:
+            return resp.json()
+    except Exception:
+        pass
+    return None
+
+
+def github_write_progress(data, branch):
+    """Commits progress.json to `branch` via GitHub's Contents API (create
+    or update — it fetches the file's current sha first, which the API
+    requires for updates). Needs GITHUB_CAN_WRITE. Returns True on success,
+    False on any failure (bad token, network issue, branch doesn't exist,
+    etc.) — callers are expected to fall back gracefully, not crash."""
+    if not GITHUB_CAN_WRITE:
+        return False
+    headers = {
+        "Authorization": f"token {GITHUB_TOKEN}",
+        "Accept": "application/vnd.github+json",
+    }
+    try:
+        existing = requests.get(f"{GITHUB_CONTENTS_URL}?ref={branch}", headers=headers, timeout=8)
+        sha = existing.json().get("sha") if existing.status_code == 200 else None
+
+        content_b64 = base64.b64encode(
+            json.dumps(data, indent=2, ensure_ascii=False).encode("utf-8")
+        ).decode("ascii")
+        payload = {
+            "message": f"chore: sync progress.json ({branch})",
+            "content": content_b64,
+            "branch": branch,
+        }
+        if sha:
+            payload["sha"] = sha
+
+        put_resp = requests.put(GITHUB_CONTENTS_URL, headers=headers, json=payload, timeout=8)
+        return put_resp.status_code in (200, 201)
+    except Exception:
+        return False
+
+
+def github_debug_check(branch):
+    """Live, on-demand diagnostic — does its own fresh GET (independent of
+    the session-cached progress load) and reports exactly what it found:
+    HTTP status, the URL it hit (token never included, safe to display),
+    and a short preview of the content. Built 2026-08-14 after a real
+    "configured secrets on both apps but it's still not reflecting" case
+    that was hard to debug blind over chat — this lets Fabio see for
+    himself, on each deployment separately, what that deployment's exact
+    github_repo/github_branch secrets actually resolve to and whether
+    GitHub is serving the expected content, instead of guessing at typos
+    or branch-protection issues from the outside."""
+    if not GITHUB_REPO:
+        return {"ok": False, "detail": "No github_repo secret configured on this deployment."}
+    cache_bust = int(datetime.now().timestamp())
+    url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{branch}/{GITHUB_PATH}?_={cache_bust}"
+    try:
+        resp = requests.get(url, timeout=8, headers={"Cache-Control": "no-cache"})
+        return {
+            "ok": resp.status_code == 200,
+            "status_code": resp.status_code,
+            "url": url.split("?")[0],
+            "preview": resp.text[:300],
+        }
+    except Exception as e:
+        return {"ok": False, "detail": f"Request failed: {e}", "url": url.split("?")[0]}
+
+
 def load_progress():
+    # Prefer GitHub (survives reboots) when configured; local file is the
+    # fallback — used for local dev with no secrets set, and as a safety
+    # net if the GitHub read fails for any reason (network hiccup, repo
+    # renamed, etc.) so the app still opens instead of crashing.
+    if GITHUB_SYNC_ENABLED:
+        remote = github_read_progress(GITHUB_BRANCH)
+        if remote is not None:
+            return remote
     if os.path.exists(PROGRESS_FILE):
         try:
             with open(PROGRESS_FILE, "r") as f:
@@ -549,11 +704,21 @@ def load_progress():
 
 
 def save_progress(data):
+    # Always write locally first — cheap, instant, and keeps the app
+    # working within the current session even if the GitHub push below
+    # fails. It just won't survive a reboot on its own on Streamlit Cloud.
     try:
         with open(PROGRESS_FILE, "w") as f:
             json.dump(data, f)
     except Exception as e:
-        st.error(f"Could not save progress: {e}")
+        st.error(f"Could not save progress locally: {e}")
+
+    if GITHUB_CAN_WRITE:
+        if not github_write_progress(data, GITHUB_BRANCH):
+            st.warning(
+                f"Saved locally, but couldn't sync to GitHub (`{GITHUB_BRANCH}`) — "
+                "check the github_token secret. This won't survive a reboot until synced."
+            )
 
 
 if "progress" not in st.session_state:
@@ -851,17 +1016,64 @@ with st.sidebar:
 
     st.markdown("---")
     st.markdown("### Backup")
-    st.caption(
-        "Progress lives on this app's own server disk, not in GitHub. Download a "
-        "copy here before pushing new code or redeploying — a redeploy resets this "
-        "app's disk to whatever is currently committed in the repo."
-    )
+    if GITHUB_SYNC_ENABLED:
+        sync_note = (
+            f"✓ Synced to GitHub — every save also commits to the `{GITHUB_BRANCH}` branch, "
+            "so a reboot picks the latest state back up from there instead of an empty disk."
+            if GITHUB_CAN_WRITE else
+            f"👁 Reading from the `{GITHUB_BRANCH}` branch on GitHub (view-only here — "
+            "no github_token configured for this deployment)."
+        )
+        st.caption(sync_note)
+    else:
+        st.caption(
+            "Progress lives on this app's own server disk only, not in GitHub. Download a "
+            "copy here before pushing new code or redeploying — a redeploy resets this "
+            "app's disk to whatever is currently committed in the repo."
+        )
     st.download_button(
         "Download progress.json",
         data=json.dumps(st.session_state.progress, indent=2, ensure_ascii=False),
         file_name="progress_backup.json",
         mime="application/json",
     )
+
+    if GITHUB_SYNC_ENABLED:
+        with st.expander("🔍 GitHub sync diagnostics"):
+            st.caption(
+                f"This deployment's secrets resolve to: repo=`{GITHUB_REPO}`, "
+                f"branch=`{GITHUB_BRANCH}`, path=`{GITHUB_PATH}`, can write={GITHUB_CAN_WRITE}. "
+                "If repo/branch/path look wrong, fix them in this app's own "
+                "Settings → Secrets (each deployment has its own)."
+            )
+            if st.button("Check GitHub now", key="gh_debug_check"):
+                check = github_debug_check(GITHUB_BRANCH)
+                st.write(check)
+    else:
+        with st.expander("🔍 GitHub sync diagnostics"):
+            st.caption(
+                "No github_repo secret found on this deployment — GitHub sync is "
+                "off, running on local disk only."
+            )
+
+    # Only the staging-style deployment (has a write-capable token, and
+    # isn't itself the main branch) gets this — publishing "to main from
+    # main" doesn't mean anything, and the main app has no token to do it
+    # with anyway.
+    if GITHUB_CAN_WRITE and GITHUB_BRANCH != "main":
+        st.markdown("---")
+        st.markdown("### Publish to main")
+        st.caption(
+            "Staging autosaves every click on its own. This button is what actually "
+            "updates the `main` branch — the app your manager sees — with everything "
+            "currently in Overview/UIP/ALM/AQM *and* the Logbook. Nothing reaches "
+            "main until you click it."
+        )
+        if st.button("📤 Publish progress to main"):
+            if github_write_progress(st.session_state.progress, "main"):
+                st.success("Published to main.")
+            else:
+                st.error("Couldn't publish — check the github_token secret and try again.")
 
 EDIT_UNLOCKED = st.session_state.edit_unlocked
 
