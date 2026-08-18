@@ -8,7 +8,7 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 import plotly.graph_objects as go
 
-# Toronto CA local time — used for every "last saved/edited" timestamp shown in
+# Toronto .CA local time — used for every "last saved/edited" timestamp shown in
 # the UI. America/Toronto auto-switches EST/EDT with daylight saving, and
 # %Z prints whichever one is currently in effect.
 TORONTO_TZ = ZoneInfo("America/Toronto")
