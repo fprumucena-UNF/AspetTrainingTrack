@@ -580,15 +580,24 @@ try:
     GITHUB_REPO = st.secrets.get("github_repo")      # "owner/reponame"
     GITHUB_BRANCH = st.secrets.get("github_branch", "main")
     GITHUB_TOKEN = st.secrets.get("github_token")    # only needed to write
+    # Path to progress.json *within the repo* — defaults to the repo root,
+    # but Fabio's repo keeps the whole app inside a TrainTrack/ subfolder
+    # (confirmed 2026-08-18 from the Streamlit Cloud deploy log: "main
+    # module: 'TrainTrack/trainingtrak.py'"), so his secrets need
+    # github_path = "TrainTrack/progress.json" — otherwise writes land at
+    # the repo root (a file the app never reads) while reads 404 against
+    # the real TrainTrack/progress.json, with no error surfaced either way.
+    GITHUB_PATH = st.secrets.get("github_path", "progress.json")
 except Exception:
     GITHUB_REPO = None
     GITHUB_BRANCH = "main"
     GITHUB_TOKEN = None
+    GITHUB_PATH = "progress.json"
 
 GITHUB_SYNC_ENABLED = bool(GITHUB_REPO)
 GITHUB_CAN_WRITE = bool(GITHUB_REPO and GITHUB_TOKEN)
 GITHUB_CONTENTS_URL = (
-    f"https://api.github.com/repos/{GITHUB_REPO}/contents/progress.json" if GITHUB_REPO else None
+    f"https://api.github.com/repos/{GITHUB_REPO}/contents/{GITHUB_PATH}" if GITHUB_REPO else None
 )
 
 
@@ -596,12 +605,19 @@ def github_read_progress(branch):
     """Reads progress.json's current content straight off GitHub's public
     raw-content CDN for the given branch — a plain HTTPS GET, no API call,
     no auth needed (the repo is public), so this works even on the `main`
-    deployment which has no github_token configured at all."""
+    deployment which has no github_token configured at all.
+
+    raw.githubusercontent.com sits behind a CDN that caches responses for a
+    few minutes, so without the cache-busting query param below, a freshly
+    published commit can still serve the *previous* content for a little
+    while after a refresh — this is what made a real "Publish to main"
+    briefly look like it hadn't worked when tested on 2026-08-14."""
     if not GITHUB_REPO:
         return None
-    url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{branch}/progress.json"
+    cache_bust = int(datetime.now().timestamp())
+    url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{branch}/{GITHUB_PATH}?_={cache_bust}"
     try:
-        resp = requests.get(url, timeout=8)
+        resp = requests.get(url, timeout=8, headers={"Cache-Control": "no-cache"})
         if resp.status_code == 200:
             return resp.json()
     except Exception:
@@ -640,6 +656,33 @@ def github_write_progress(data, branch):
         return put_resp.status_code in (200, 201)
     except Exception:
         return False
+
+
+def github_debug_check(branch):
+    """Live, on-demand diagnostic — does its own fresh GET (independent of
+    the session-cached progress load) and reports exactly what it found:
+    HTTP status, the URL it hit (token never included, safe to display),
+    and a short preview of the content. Built 2026-08-14 after a real
+    "configured secrets on both apps but it's still not reflecting" case
+    that was hard to debug blind over chat — this lets Fabio see for
+    himself, on each deployment separately, what that deployment's exact
+    github_repo/github_branch secrets actually resolve to and whether
+    GitHub is serving the expected content, instead of guessing at typos
+    or branch-protection issues from the outside."""
+    if not GITHUB_REPO:
+        return {"ok": False, "detail": "No github_repo secret configured on this deployment."}
+    cache_bust = int(datetime.now().timestamp())
+    url = f"https://raw.githubusercontent.com/{GITHUB_REPO}/{branch}/{GITHUB_PATH}?_={cache_bust}"
+    try:
+        resp = requests.get(url, timeout=8, headers={"Cache-Control": "no-cache"})
+        return {
+            "ok": resp.status_code == 200,
+            "status_code": resp.status_code,
+            "url": url.split("?")[0],
+            "preview": resp.text[:300],
+        }
+    except Exception as e:
+        return {"ok": False, "detail": f"Request failed: {e}", "url": url.split("?")[0]}
 
 
 def load_progress():
@@ -994,6 +1037,24 @@ with st.sidebar:
         file_name="progress_backup.json",
         mime="application/json",
     )
+
+    if GITHUB_SYNC_ENABLED:
+        with st.expander("🔍 GitHub sync diagnostics"):
+            st.caption(
+                f"This deployment's secrets resolve to: repo=`{GITHUB_REPO}`, "
+                f"branch=`{GITHUB_BRANCH}`, path=`{GITHUB_PATH}`, can write={GITHUB_CAN_WRITE}. "
+                "If repo/branch/path look wrong, fix them in this app's own "
+                "Settings → Secrets (each deployment has its own)."
+            )
+            if st.button("Check GitHub now", key="gh_debug_check"):
+                check = github_debug_check(GITHUB_BRANCH)
+                st.write(check)
+    else:
+        with st.expander("🔍 GitHub sync diagnostics"):
+            st.caption(
+                "No github_repo secret found on this deployment — GitHub sync is "
+                "off, running on local disk only."
+            )
 
     # Only the staging-style deployment (has a write-capable token, and
     # isn't itself the main branch) gets this — publishing "to main from
