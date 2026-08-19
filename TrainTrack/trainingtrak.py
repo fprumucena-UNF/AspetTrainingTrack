@@ -1,7 +1,6 @@
 import streamlit as st
 import json
 import os
-import re
 import base64
 import requests
 from datetime import datetime, date
@@ -174,18 +173,6 @@ st.markdown(
         border: 2px solid {BMO_RED_DEEP} !important;
         border-left: 6px solid {BMO_RED_DEEP} !important;
     }}
-    /* Logbook sort buttons — whichever direction (Oldest/Newest first) was
-       last clicked stays filled in, same marker + :has() trick again, this
-       time targeting the column that holds the active button. Uses
-       BMO_LIGHT_BLUE (already in the palette, just unused elsewhere) so the
-       fill reads as brand blue but doesn't compete with BMO_BLUE_DARK,
-       which the rest of the UI reserves for stronger/darker accents. */
-    [data-testid="stHorizontalBlock"] > div:has(.sort-btn-active) button {{
-        background-color: {BMO_LIGHT_BLUE} !important;
-        color: {BMO_BLUE_DARK} !important;
-        border: 1px solid {BMO_BLUE_DARK} !important;
-        font-weight: 700 !important;
-    }}
     /* Column header strip */
     .col-header {{
         font-size: 0.82rem !important;
@@ -239,14 +226,6 @@ st.markdown(
         color: {BMO_BLUE_DARK} !important;
         margin: 0 0 0.3rem 0 !important;
     }}
-    /* Logbook row count next to the "Logbook" title — deliberately lighter
-       weight than the title itself so it reads as a caption-like annotation,
-       not a second heading competing for attention. */
-    .logbook-count {{
-        font-size: 0.85rem !important;
-        font-weight: 400 !important;
-        color: {BMO_GRAY} !important;
-    }}
     /* Section-header badge — same visual language as the tab labels above
        (solid BMO navy pill, bold white text) so section titles like
        "Progress" read as a matching part of the same design system. */
@@ -270,16 +249,6 @@ st.markdown(
     .progress-pct {{
         font-weight: 700 !important;
         color: {BMO_BLUE_DARK} !important;
-    }}
-    /* Logbook notepad — plain white writing area */
-    .stTextArea textarea {{
-        background-color: #FFFFFF !important;
-        color: #1A1A1A !important;
-        font-size: 1.02rem !important;
-        line-height: 1.7 !important;
-        padding: 1rem !important;
-        border: 1px solid #E1DFDD !important;
-        border-radius: 6px !important;
     }}
     /* Ensure text stays dark/readable regardless of OS dark-mode preference */
     body, p, span, div, label {{ color: #1A1A1A; }}
@@ -316,7 +285,7 @@ TRACKS = ["User", "Supervisor", "Administrator", "Support Engineer"]
 PLATFORM_ITEMS = {
     "UIP": [
         # User — 7h
-        {"id": 1, "track": "User", "name": "Agent Interface (UAD)",
+        {"id": 1, "track": "User", "name": "Agent Interface (UAD / Nofify)",
          "desc": "Login, status, transfer and conference calls", "hours": 2,
          "priority": "focus"},
         {"id": 2, "track": "User", "name": "Multichannel Support",
@@ -779,49 +748,6 @@ def set_general_start(value):
     save_progress(st.session_state.progress)
 
 
-def get_logbook_text():
-    return st.session_state.progress.get("logbook_text", "")
-
-
-def set_logbook_text(value):
-    st.session_state.progress["logbook_text"] = value
-    st.session_state.progress["logbook_updated"] = now_toronto_str()
-    save_progress(st.session_state.progress)
-
-
-def get_logbook_updated():
-    return st.session_state.progress.get("logbook_updated")
-
-
-# Matches Fabio's Logbook line format, e.g.:
-#   • [2026-07-23] - [CCS - Aspect/Alvaria] - Participated in ... - Learning: ...
-# The bullet/dash before the date is optional so the pattern still catches a
-# line even if it's typed without it — only the [YYYY-MM-DD] at (or near) the
-# start of the line is required.
-LOGBOOK_DATE_RE = re.compile(r"^\s*[•\-]?\s*\[(\d{4}-\d{2}-\d{2})\]")
-
-
-def sort_logbook_text(text, ascending):
-    """Reorders dated entry lines by the [YYYY-MM-DD] at their start.
-
-    Lines that don't match the pattern (blank lines, freeform notes without a
-    date) are left untouched and kept together, ahead of the sorted dated
-    lines — they're never reordered or dropped, just not part of the sort.
-    Same-date lines keep their original relative order (stable sort).
-    """
-    lines = text.split("\n")
-    dated, other = [], []
-    for line in lines:
-        match = LOGBOOK_DATE_RE.match(line)
-        if match:
-            dated.append((match.group(1), line))
-        else:
-            other.append(line)
-    dated.sort(key=lambda pair: pair[0], reverse=not ascending)
-    sorted_lines = [line for _, line in dated]
-    return "\n".join(other + sorted_lines) if other else "\n".join(sorted_lines)
-
-
 def verint_key(curriculum, item_id):
     return f"verint:{curriculum}:{item_id}"
 
@@ -1100,8 +1026,7 @@ with st.sidebar:
         st.caption(
             "Staging autosaves every click on its own. This button is what actually "
             "updates the `main` branch — the app your manager sees — with everything "
-            "currently in Overview/UIP/ALM/AQM *and* the Logbook. Nothing reaches "
-            "main until you click it."
+            "currently in Overview/UIP/ALM/AQM. Nothing reaches main until you click it."
         )
         if st.button("📤 Publish progress to main"):
             if github_write_progress(st.session_state.progress, "main"):
@@ -1119,8 +1044,8 @@ EDIT_UNLOCKED = st.session_state.edit_unlocked
 st.title("UIP · ALM · AQM — Training Track Dashboard")
 st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio Prumucena — Aspect/Alvaria Specialist | BMO CCS | Connex")
 
-tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint, tab_logbook = st.tabs(
-    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "Logbook"]
+tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint = st.tabs(
+    ["Overview", "UIP", "ALM", "AQM", "Verint Academy"]
 )
 
 with tab_overview:
@@ -1198,113 +1123,6 @@ with tab_alm:
 
 with tab_aqm:
     render_platform_tab("AQM")
-
-with tab_logbook:
-    with st.container(border=True):
-        current_text = get_logbook_text()
-        # Streamlit warns if a keyed widget gets both a `value=` argument and
-        # a pre-set st.session_state entry on the same run (the sort buttons
-        # below need to set the latter to force the box to refresh). The
-        # clean pattern it recommends: seed session_state once, up front,
-        # and never pass `value=` to the widget itself — see the text_area
-        # call further down.
-        if "logbook_textarea" not in st.session_state:
-            st.session_state["logbook_textarea"] = current_text
-
-        # Counts dated entries (lines starting with [YYYY-MM-DD]), the same
-        # ones the sort buttons recognize — so this number always matches
-        # what "Oldest first" / "Newest first" would actually reorder, not
-        # just a raw line count that could include blank lines or freeform
-        # notes without a date.
-        logged_count = sum(1 for line in current_text.split("\n") if LOGBOOK_DATE_RE.match(line))
-        row_word = "row" if logged_count == 1 else "rows"
-
-        top = st.columns([3, 1, 1.3])
-        with top[0]:
-            st.markdown(
-                f"<div class='progress-title'>Logbook "
-                f"<span class='logbook-count'>[{logged_count} {row_word} logged]</span></div>",
-                unsafe_allow_html=True,
-            )
-        with top[1]:
-            last_updated = get_logbook_updated()
-            if last_updated:
-                st.caption(f"Last edited: {last_updated}")
-        with top[2]:
-            st.download_button(
-                "Download Logbook",
-                data=current_text,
-                file_name=f"logbook_{date.today().isoformat()}.txt",
-                mime="text/plain",
-                disabled=not current_text,
-            )
-
-        st.caption(
-            "A large part of this training has actually happened outside of formal modules — "
-            "shadowing colleagues, reading Confluence articles, getting guidance and clarifying "
-            "doubts with the CSS team, and above all working directly on tickets, cases, and "
-            "incidents. This log is meant to capture some of the most significant ones."
-        )
-
-        # Tracks which sort direction was last clicked, purely so the matching
-        # button can stay highlighted (see .sort-btn-active CSS above). Session-
-        # only — resets on page reload, doesn't need to live in progress.json.
-        st.session_state.setdefault("logbook_sort_dir", None)
-
-        # Sorting is a *view* operation, not an edit — it works even in
-        # view-only mode (no password entered). If editing is unlocked, the
-        # new order is also saved to progress.json so it sticks around; if
-        # not, it only changes what this browser session currently sees
-        # (via the logbook_textarea session-state trick below) and the
-        # underlying saved Logbook is left untouched. That keeps the
-        # password gate meaningful — a view-only visitor (e.g. the `main`
-        # app shared with Fabio's manager) can re-sort their own view
-        # without being able to permanently reorder anyone else's data.
-        sort_cols = st.columns([1.3, 1.3, 4])
-        with sort_cols[0]:
-            if st.session_state["logbook_sort_dir"] == "asc":
-                st.markdown("<div class='sort-btn-active'></div>", unsafe_allow_html=True)
-            if st.button("↑ Oldest first", disabled=not current_text, width="stretch"):
-                sorted_text = sort_logbook_text(current_text, ascending=True)
-                if EDIT_UNLOCKED:
-                    set_logbook_text(sorted_text)
-                # The text_area below is keyed "logbook_textarea" — once rendered,
-                # Streamlit shows whatever is in st.session_state["logbook_textarea"]
-                # and ignores the `value=` we pass it on later reruns. Setting the
-                # keyed session_state entry directly (regardless of EDIT_UNLOCKED)
-                # is what makes the box actually show the new order.
-                st.session_state["logbook_textarea"] = sorted_text
-                st.session_state["logbook_sort_dir"] = "asc"
-                st.rerun()
-        with sort_cols[1]:
-            if st.session_state["logbook_sort_dir"] == "desc":
-                st.markdown("<div class='sort-btn-active'></div>", unsafe_allow_html=True)
-            if st.button("↓ Newest first", disabled=not current_text, width="stretch"):
-                sorted_text = sort_logbook_text(current_text, ascending=False)
-                if EDIT_UNLOCKED:
-                    set_logbook_text(sorted_text)
-                st.session_state["logbook_textarea"] = sorted_text
-                st.session_state["logbook_sort_dir"] = "desc"
-                st.rerun()
-        with sort_cols[2]:
-            st.caption(
-                "Sorts lines starting with a [YYYY-MM-DD] date. Any line without one "
-                "(blank lines, freeform notes) is left as-is, grouped above the sorted entries."
-                + ("" if EDIT_UNLOCKED else " View-only: this reorders what you see here, "
-                   "but isn't saved since editing is locked.")
-            )
-
-        new_text = st.text_area(
-            "Logbook",
-            height=560,
-            key="logbook_textarea",
-            label_visibility="collapsed",
-            placeholder="Write freely here — daily notes, case details, anything worth remembering...",
-            disabled=not EDIT_UNLOCKED,
-        )
-        if new_text != current_text:
-            set_logbook_text(new_text)
-            st.rerun()
 
 with tab_verint:
     st.caption(
