@@ -17,14 +17,17 @@
   "verint:Partner Implementation Curriculum:4": true,
   "UIP:1": "Done",
   "UIP:6": "Done",
-  "UIP:5": "Not started",
+  "UIP:5": "Done",
   "UIP:12": "Not started",
   "UIP:13": "Done",
-  "UIP:18": "Not started",
+  "UIP:18": "Done",
   "ALM:3": "Done",
   "ALM:5": "Done",
   "ALM:2": "Done",
   "ALM:6": "Done",
   "ALM:9": "Done",
-  "AQM:6": "Done"
+  "AQM:6": "Done",
+  "AQM:7": "Done",
+  "UIP:9": "Done",
+  "UIP:10": "Done"
 }
