@@ -43,7 +43,6 @@ Notes:
 
 from datetime import datetime, timedelta
 
-import networkx as nx
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
@@ -230,27 +229,37 @@ def render_bmo_work_tab() -> None:
         if fdf.empty:
             st.info("No items match the current filters.")
         else:
-            G = nx.Graph()
-            G.add_node("Fabio", kind="center")
+            # Keep the network visualization dependency-free.  The app only
+            # needs nodes, edges, and positions for this Plotly chart.
+            nodes = {"Fabio": {"kind": "center"}}
+            edges = []
             for ws in sorted(fdf["workstream"].unique()):
-                G.add_node(ws, kind="workstream")
-                G.add_edge("Fabio", ws)
+                nodes[ws] = {"kind": "workstream"}
+                edges.append(("Fabio", ws))
             for _, row in fdf.iterrows():
                 item_label = f"{row['ref'] or row['id']}"
-                G.add_node(
-                    item_label, kind="item", workstream=row["workstream"],
-                    title=row["title"], status=row["status"], itype=row["type"],
-                )
-                G.add_edge(row["workstream"], item_label)
+                nodes[item_label] = {
+                    "kind": "item", "workstream": row["workstream"],
+                    "title": row["title"], "status": row["status"],
+                    "itype": row["type"],
+                }
+                edges.append((row["workstream"], item_label))
                 for person in row["people"]:
                     if not person:
                         continue
-                    G.add_node(person, kind="person")
-                    G.add_edge(item_label, person)
+                    nodes.setdefault(person, {"kind": "person"})
+                    edges.append((item_label, person))
 
-            pos = nx.spring_layout(G, seed=7, k=0.6)
+            # A stable circular layout is sufficient here and avoids requiring
+            # an additional package just to position Plotly nodes.
+            import math
+            pos = {
+                node: (math.cos(2 * math.pi * i / max(len(nodes), 1)),
+                       math.sin(2 * math.pi * i / max(len(nodes), 1)))
+                for i, node in enumerate(nodes)
+            }
             edge_x, edge_y = [], []
-            for a, b in G.edges():
+            for a, b in edges:
                 edge_x += [pos[a][0], pos[b][0], None]
                 edge_y += [pos[a][1], pos[b][1], None]
             edge_trace = go.Scatter(
@@ -266,22 +275,22 @@ def render_bmo_work_tab() -> None:
                 "person": dict(size=12, color="#c3c2b7", symbol="diamond"),
             }
             for kind in ["item", "person", "workstream", "center"]:
-                nodes = [n for n, d in G.nodes(data=True) if d.get("kind") == kind]
-                if not nodes:
+                kind_nodes = [n for n, d in nodes.items() if d.get("kind") == kind]
+                if not kind_nodes:
                     continue
-                xs = [pos[n][0] for n in nodes]
-                ys = [pos[n][1] for n in nodes]
+                xs = [pos[n][0] for n in kind_nodes]
+                ys = [pos[n][1] for n in kind_nodes]
                 style = kind_style[kind]
                 if kind == "workstream":
-                    colors = [WORKSTREAMS.get(n, MUTED) for n in nodes]
+                    colors = [WORKSTREAMS.get(n, MUTED) for n in kind_nodes]
                 elif kind == "item":
-                    colors = [WORKSTREAMS.get(G.nodes[n].get("workstream"), MUTED) for n in nodes]
+                    colors = [WORKSTREAMS.get(nodes[n].get("workstream"), MUTED) for n in kind_nodes]
                 else:
                     colors = style["color"]
 
                 hover = []
-                for n in nodes:
-                    d = G.nodes[n]
+                for n in kind_nodes:
+                    d = nodes[n]
                     if kind == "item":
                         hover.append(
                             f"<b>{d.get('title')}</b><br>{d.get('itype')} · {n}<br>Status: {d.get('status')}"
@@ -297,7 +306,7 @@ def render_bmo_work_tab() -> None:
                     go.Scatter(
                         x=xs, y=ys,
                         mode="markers" + ("+text" if kind in ("center", "workstream") else ""),
-                        text=nodes if kind in ("center", "workstream") else None,
+                        text=kind_nodes if kind in ("center", "workstream") else None,
                         textposition="top center",
                         hovertext=hover, hoverinfo="text",
                         marker=dict(
