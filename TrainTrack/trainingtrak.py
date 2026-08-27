@@ -7,6 +7,8 @@ from datetime import datetime, date
 from zoneinfo import ZoneInfo
 import plotly.graph_objects as go
 
+from bmo_work_tab import render_bmo_work_tab
+
 # Toronto local time — used for every "last saved/edited" timestamp shown in
 # the UI. America/Toronto auto-switches EST/EDT with daylight saving, and
 # %Z prints whichever one is currently in effect.
@@ -1044,8 +1046,8 @@ EDIT_UNLOCKED = st.session_state.edit_unlocked
 st.title("UIP · ALM · AQM — Training Track Dashboard")
 st.caption("BMO / Connexservice · Aspect / Alvaria Unified IP 7.4 SP2 · Fabio Prumucena — Aspect/Alvaria Specialist | BMO CCS | Connex")
 
-tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint = st.tabs(
-    ["Overview", "UIP", "ALM", "AQM", "Verint Academy"]
+tab_overview, tab_uip, tab_alm, tab_aqm, tab_verint, tab_bmowork = st.tabs(
+    ["Overview", "UIP", "ALM", "AQM", "Verint Academy", "📊 My BMO Work"]
 )
 
 with tab_overview:
@@ -1145,6 +1147,9 @@ with tab_verint:
             key_prefix=f"verint_{curriculum}",
             hours_fmt=format_duration,
         )
+
+with tab_bmowork:
+    render_bmo_work_tab()
 
 st.markdown("<div style='margin-top:0.8rem;'></div>", unsafe_allow_html=True)
 st.caption(f"Last saved: {now_toronto_str()} · Progress stored in {PROGRESS_FILE}")
