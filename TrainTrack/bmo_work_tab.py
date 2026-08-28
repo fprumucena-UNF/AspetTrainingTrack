@@ -61,12 +61,30 @@ CARD_BG = "#FFFFFF"
 PAGE_TINT = "#FAF9FE"
 GRID_TINT = "#ECE8F7"
 
+# Deepened 2026-08-28 — the first version used bright mid-tone gradients
+# (e.g. orange→pink, teal→green) that looked bold but left white text at
+# poor contrast on the lighter end of each gradient (Fabio flagged this as
+# "hard to read"). These are darker/deeper jewel tones instead — still
+# saturated and vivid, but every stop keeps white text clearly readable.
 KPI_GRADIENTS = [
-    "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",   # Total items — indigo/violet
-    "linear-gradient(135deg, #FF6A3D 0%, #FF3D6E 100%)",   # Active now — orange/pink (urgency)
-    "linear-gradient(135deg, #00C896 0%, #12A883 100%)",   # Resolved % — teal/green
-    "linear-gradient(135deg, #2F6FED 0%, #6A5CF5 100%)",   # Workstreams touched — blue/indigo
+    "linear-gradient(135deg, #4C1D95 0%, #6D28D9 100%)",   # Total items — deep violet
+    "linear-gradient(135deg, #9A3412 0%, #BE123C 100%)",   # Active now — deep orange/rose (urgency)
+    "linear-gradient(135deg, #065F46 0%, #0F766E 100%)",   # Resolved % — deep emerald/teal
+    "linear-gradient(135deg, #1E3A8A 0%, #4338CA 100%)",   # Workstreams touched — deep blue/indigo
 ]
+
+
+def _darken(hex_color, factor=0.6):
+    """Darken a hex color for use as text on a pale tint of that same color.
+    Needed because some WORKSTREAMS colors (the yellow, the teal) are bright
+    enough that white text on a solid fill — or the color itself on a pale
+    tint of itself — is hard to read. Darkening keeps the same hue (so it
+    still reads as "that workstream's color") while guaranteeing contrast,
+    regardless of how light the original color is."""
+    h = hex_color.lstrip("#")
+    r, g, b = (int(h[i:i + 2], 16) for i in (0, 2, 4))
+    r, g, b = (max(0, int(c * factor)) for c in (r, g, b))
+    return f"#{r:02x}{g:02x}{b:02x}"
 
 
 def _kpi_card(icon, value, label, gradient):
@@ -111,14 +129,16 @@ def render_bmo_work_tab() -> None:
                 min-height: 108px;
                 box-shadow: 0 8px 20px rgba(20,10,40,0.18);
             }}
-            .bmo-kpi-icon {{ font-size: 1.5rem; line-height: 1; }}
+            .bmo-kpi-icon {{ font-size: 1.5rem; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.25); }}
             .bmo-kpi-value {{
                 font-size: 2.15rem; font-weight: 800; line-height: 1.15;
                 margin-top: 8px; letter-spacing: -0.01em;
+                text-shadow: 0 1px 3px rgba(0,0,0,0.25);
             }}
             .bmo-kpi-label {{
                 font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
-                letter-spacing: 0.06em; opacity: 0.88; margin-top: 3px;
+                letter-spacing: 0.06em; opacity: 0.95; margin-top: 3px;
+                text-shadow: 0 1px 2px rgba(0,0,0,0.2);
             }}
             .bmo-insight {{
                 background: #FFF3EC;
@@ -182,9 +202,17 @@ def render_bmo_work_tab() -> None:
             .bmo-tl-tags {{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
             .bmo-tl-tag {{
                 font-size: 0.7rem; font-weight: 700; padding: 3px 11px; border-radius: 999px;
-                color: #FFFFFF;
+            }}
+            .bmo-tl-tag-muted {{
+                font-size: 0.7rem; font-weight: 700; padding: 3px 11px; border-radius: 999px;
+                background: {GRID_TINT}; color: #6B6478;
             }}
             .bmo-tl-status {{ font-size: 0.78rem; font-weight: 600; color: {INK}; }}
+            .bmo-tl-divider {{
+                font-size: 0.72rem; font-weight: 700; color: #8A8395;
+                text-transform: uppercase; letter-spacing: 0.05em;
+                margin: 4px 0 10px 0;
+            }}
             .bmo-legend-chip {{
                 display:inline-flex; align-items:center; gap:6px;
                 font-size:0.8rem; font-weight:600; color:{INK};
@@ -307,7 +335,7 @@ def render_bmo_work_tab() -> None:
     # ================= TAB 1 — Overview =================
     with tab_overview:
         st.markdown('<div class="bmo-section-title">How the work unfolded</div>', unsafe_allow_html=True)
-        st.markdown('<div class="bmo-section-sub">A running story, oldest to newest — scroll for the full list.</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bmo-section-sub">Tasks first, oldest to newest — recurring meetings are grouped at the end.</div>', unsafe_allow_html=True)
 
         # A vertical "milestone" timeline instead of a Gantt chart. Gantt bars
         # look great when items run for a while, but most items here are
@@ -315,9 +343,28 @@ def render_bmo_work_tab() -> None:
         # slivers of very uneven width, which is exactly the "hard to read"
         # complaint. A chronological card list reads cleanly regardless of
         # how long an item took, and doubles as a compact activity feed.
-        story_df = fdf.sort_values("start_dt")
+        #
+        # Sort order (2026-08-28): actual work (Case/Incident/Initiative/
+        # Event) always comes before recurring Meetings, regardless of date.
+        # Fabio's recurring CCS meetings all start on day one, so a pure
+        # chronological sort buried the real case/incident work under a wall
+        # of meetings at the very top — the opposite of what matters most.
+        # Meetings still show up (grouped, muted, at the bottom), just not
+        # first.
+        story_df = fdf.copy()
+        story_df["is_meeting"] = story_df["type"] == "Meeting"
+        story_df = story_df.sort_values(["is_meeting", "start_dt"])
+
         rows_html = []
+        meetings_intro_added = False
         for _, row in story_df.iterrows():
+            is_meeting = row["is_meeting"]
+            if is_meeting and not meetings_intro_added:
+                rows_html.append(
+                    '<div class="bmo-tl-divider">🔁 Recurring meetings (ongoing cadence, not one-off work)</div>'
+                )
+                meetings_intro_added = True
+
             color = WORKSTREAMS.get(row["workstream"], MUTED)
             date_label = row["start_dt"].strftime("%b %d")
             if pd.notna(row["end_dt"]) and row["end_dt"] > row["start_dt"]:
@@ -331,15 +378,30 @@ def render_bmo_work_tab() -> None:
             # here previously left whitespace-only gaps between cards,
             # which broke the block after the first card and made every
             # card after it show up as literal text instead of rendering.
-            tag_label = f"{WORKSTREAM_ICONS.get(row['workstream'], '')} {row['workstream']}"
+            if is_meeting:
+                # Muted on purpose — same reasoning as the sort order above:
+                # recurring meetings are real but secondary, so they read as
+                # background context rather than competing with real work
+                # for attention.
+                dot_color = MUTED
+                tag_html = '<span class="bmo-tl-tag-muted">🔁 Recurring meeting</span>'
+            else:
+                dot_color = color
+                # Text uses a darkened version of the workstream color, not
+                # the color itself, on a pale tint of the original — plain
+                # white-on-color failed badly for the brighter hues (the
+                # yellow and teal workstreams were nearly unreadable).
+                text_color = _darken(color)
+                tag_label = f"{WORKSTREAM_ICONS.get(row['workstream'], '')} {row['workstream']}"
+                tag_html = f'<span class="bmo-tl-tag" style="background:{color}20; color:{text_color};">{tag_label}</span>'
             rows_html.append(
                 '<div class="bmo-tl-node">'
-                f'<div class="bmo-tl-dot" style="color:{color};"></div>'
+                f'<div class="bmo-tl-dot" style="color:{dot_color};"></div>'
                 '<div class="bmo-tl-card">'
                 f'<div class="bmo-tl-date">{date_label}</div>'
                 f'<div class="bmo-tl-title">{row["type_icon"]} {row["title"]}</div>'
                 '<div class="bmo-tl-tags">'
-                f'<span class="bmo-tl-tag" style="background:{color};">{tag_label}</span>'
+                f'{tag_html}'
                 f'<span class="bmo-tl-status">{status_icon} {row["status"]}</span>{unverified}'
                 '</div></div></div>'
             )
