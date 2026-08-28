@@ -23,14 +23,30 @@ Fields:
     evidence    str   where this came from (email subject / meeting / doc)
     confirmed   bool  False = Copilot flagged this as not fully verified
 
-NAMING NOTE (2026-08-28): "Alvaria", "Alvaria Support", "Alvaria Customer
-Care" and "Aspect" all refer to the same vendor/organization (Aspect
-Software rebranded to Alvaria) — use the single label "Alvaria" for any
-`people` entry that means "the vendor," not a specific named person. A
-named individual who happens to work there (e.g. "Paola Barreto Betancourt
-(Alvaria)") stays as-is — this rule is only about collapsing generic
-vendor-side placeholders so they don't fragment the Top Collaborators /
-Connections views in the My BMO Work tab into near-duplicate entries.
+NAMING NOTE (2026-08-28, revised same day): "Alvaria", "Alvaria Support",
+"Alvaria Customer Care" and "Aspect" all refer to the same vendor/
+organization (Aspect Software rebranded to Alvaria). Use the single label
+"Alvaria" for EVERY `people` entry on the vendor side — including named
+individuals there (e.g. Paola Barreto Betancourt, Carlos Estrada, Pedro
+Gonzales, Candido Ortiz, or anyone else at Aspect/Alvaria). Fabio's call:
+for this dashboard, the vendor relationship is what matters, not which
+specific person at Alvaria was on the thread — so don't add a new named
+person there even if a future item names one; fold them into "Alvaria"
+too. (An earlier version of this note said named individuals should stay
+separate — that's superseded.) This only applies to the vendor side: BMO/
+Connext colleagues (Parra Yeffer, Freed Mike, etc.) are unaffected and
+keep their real names, since those distinctions are the ones that matter
+here.
+
+MERGE NOTE (2026-08-28): three pairs of items that told one continuous
+story were combined into a single entry, at Fabio's request, so the
+timeline reads as one card instead of two near-duplicates:
+  - CASE-01607749 + CASE-01616878        -> CASE-URM
+  - INIT-ROLLUP-ANALYSIS + INIT-ROLLUP-NOTES -> INIT-ROLLUP-REVIEW
+  - CASE-01617931 + INIT-PII             -> INIT-PII-EXERCISE (renamed
+    "PII Unmasked Data Exercise" per Fabio)
+The old ids are gone rather than kept as aliases — if you're hunting for
+one of them in an old export, it's now part of the merged entry above.
 """
 
 # Fixed categorical palette (dataviz skill default, assigned in order — never cycled)
@@ -143,27 +159,32 @@ WORK_ITEMS = [
 
     # ---- UIP Rollup & Certificates ----
     {
-        "id": "CASE-01607749", "type": "Case", "ref": "01607749",
-        "title": "URM — Certificate Validation Errors",
-        "workstream": "UIP Rollup & Certificates", "start": "2026-08-04", "end": "2026-08-07",
-        "status": "Active", "role": "Received and tracked the full case thread; assessed operational impact",
+        # Merged 2026-08-28 from two separate URM cases (01607749 + 01616878)
+        # at Fabio's request — same underlying topic (URM), so one card
+        # tells the story better than two fragments a couple weeks apart.
+        "id": "CASE-URM", "type": "Case", "ref": "01607749 / 01616878",
+        "title": "URM — Certificate Validation & Dependency Question",
+        "workstream": "UIP Rollup & Certificates", "start": "2026-08-04", "end": "2026-08-18",
+        "status": "Resolved",
+        "role": "Received and tracked the certificate-validation case thread, assessing operational "
+                "impact; later authored a follow-up technical inquiry on isolated install vs. full "
+                "Rollup and got confirmation the isolated install isn't supported — recommended the "
+                "full Rollup",
         "people": ["Parra, Yeffer", "Alvaria"],
-        "evidence": "FW: Customer Care | Case 01607749", "confirmed": True,
+        "evidence": "FW: Customer Care | Case 01607749; Support Case 01616878", "confirmed": True,
     },
     {
-        "id": "INIT-ROLLUP-ANALYSIS", "type": "Initiative", "ref": "",
-        "title": "UIP 7.4 SP2 Rollup — Impact Analysis",
-        "workstream": "UIP Rollup & Certificates", "start": "2026-08-13", "end": "2026-08-13",
-        "status": "Resolved", "role": "Assessed TLS 1.3, JRE17 client, Hotfix Utility, and thick-client impact; "
-                                       "sent findings to Freed, Mike",
-        "people": ["Freed, Mike"], "evidence": "FW: uip", "confirmed": True,
-    },
-    {
-        "id": "INIT-ROLLUP-NOTES", "type": "Initiative", "ref": "",
-        "title": "UIP 7.4 SP2 Rollup — Release Notes Reviewed",
-        "workstream": "UIP Rollup & Certificates", "start": "2026-08-14", "end": "2026-08-14",
-        "status": "Resolved", "role": "Reviewed official Alvaria release notes ahead of deployment",
-        "people": ["Alvaria"], "evidence": "UIP 7.4SP2 July 2026 Roll Up - ACC Release Notes", "confirmed": True,
+        # Merged 2026-08-28 from the two same-day Rollup review items
+        # (impact analysis + release notes) — one continuous piece of prep
+        # work, not two separate ones.
+        "id": "INIT-ROLLUP-REVIEW", "type": "Initiative", "ref": "",
+        "title": "UIP 7.4 SP2 Rollup — Impact Analysis & Release Notes Review",
+        "workstream": "UIP Rollup & Certificates", "start": "2026-08-13", "end": "2026-08-14",
+        "status": "Resolved",
+        "role": "Assessed TLS 1.3, JRE17 client, Hotfix Utility, and thick-client impact; sent findings "
+                "to Freed, Mike. Also reviewed the official Alvaria release notes ahead of deployment",
+        "people": ["Freed, Mike", "Alvaria"],
+        "evidence": "FW: uip; UIP 7.4SP2 July 2026 Roll Up - ACC Release Notes", "confirmed": True,
     },
     {
         "id": "CASE-01615360", "type": "Case", "ref": "01615360",
@@ -171,14 +192,6 @@ WORK_ITEMS = [
         "workstream": "UIP Rollup & Certificates", "start": "2026-08-17", "end": "",
         "status": "Active", "role": "Opened and owns the case as primary contact",
         "people": ["Alvaria"], "evidence": "Support Case 01615360", "confirmed": True,
-    },
-    {
-        "id": "CASE-01616878", "type": "Case", "ref": "01616878",
-        "title": "URM Dependency Question (isolated install vs. full Rollup)",
-        "workstream": "UIP Rollup & Certificates", "start": "2026-08-18", "end": "2026-08-18",
-        "status": "Resolved", "role": "Authored the technical inquiry; got confirmation the isolated install "
-                                       "isn't supported — recommended the full Rollup",
-        "people": ["Alvaria"], "evidence": "Support Case 01616878", "confirmed": True,
     },
 
     # ---- Infrastructure Performance ----
@@ -214,7 +227,7 @@ WORK_ITEMS = [
         "status": "In Progress", "role": "Coordinated the physical power-cycle recommendation, operations "
                                           "communication, onsite support, and the Alvaria interface — "
                                           "the most significant case in this window",
-        "people": ["Paola Barreto Betancourt (Alvaria)", "Parra, Yeffer", "Freed, Mike"],
+        "people": ["Alvaria", "Parra, Yeffer", "Freed, Mike"],
         "evidence": "Case 01617334 / Paola Barreto Betancourt thread", "confirmed": True,
     },
     {
@@ -235,20 +248,20 @@ WORK_ITEMS = [
 
     # ---- Logging & PII Compliance ----
     {
-        "id": "CASE-01617931", "type": "Case", "ref": "01617931",
-        "title": "UIP Log Level Changes in QA",
-        "workstream": "Logging & PII Compliance", "start": "2026-08-24", "end": "2026-08-25",
-        "status": "In Progress", "role": "Opened the case; reviewing log level vs. retention/size trade-offs "
-                                          "with Alvaria engineering — status moved to Technical Support Resolving",
-        "people": ["Alvaria"], "evidence": "New Case: 01617931 / Support Case Updated: 01617931",
-        "confirmed": True,
-    },
-    {
-        "id": "INIT-PII", "type": "Initiative", "ref": "CHG1107075 / CTASK2148271",
-        "title": "Delivery Letter — Aspect Lowering Logging Levels to Minimize PII",
-        "workstream": "Logging & PII Compliance", "start": "2026-08-27", "end": "",
-        "status": "Active", "role": "Involved in the PII logging-reduction delivery",
-        "people": ["Alvaria"], "evidence": "Delivery Letter: Aspect Lowering Logging Levels to Minimize PII Data",
+        # Merged 2026-08-28 from the log-level case (01617931) and the PII
+        # delivery-letter initiative — the case's log-level work fed
+        # straight into this delivery, so Fabio wanted it told as one
+        # exercise rather than two disconnected entries.
+        "id": "INIT-PII-EXERCISE", "type": "Initiative", "ref": "01617931 / CHG1107075 / CTASK2148271",
+        "title": "PII Unmasked Data Exercise",
+        "workstream": "Logging & PII Compliance", "start": "2026-08-24", "end": "2026-08-27",
+        "status": "Active",
+        "role": "Opened the case reviewing log level vs. retention/size trade-offs with Alvaria "
+                "engineering; that work fed into the delivery letter covering Alvaria/Aspect lowering "
+                "logging levels to minimize PII data exposure",
+        "people": ["Alvaria"],
+        "evidence": "New Case: 01617931 / Support Case Updated: 01617931; "
+                    "Delivery Letter: Aspect Lowering Logging Levels to Minimize PII Data",
         "confirmed": True,
     },
 ]
