@@ -166,7 +166,7 @@ WORK_ITEMS = [
         "role": "Triaged and escalated to the installation team — root cause was a new machine with "
                 "installation issues in the Aspect apps. Recurring pattern: new machines consistently "
                 "arrive with problems in the Aspect app installation",
-        "people": ["CCS"], "evidence": "Handled directly, escalated to installation team", "confirmed": True,
+        "people": ["CCS"], "evidence": "Handled directly, escalated to L2", "confirmed": True,
     },
 
     # ---- UIP Rollup & Certificates ----
@@ -238,9 +238,9 @@ WORK_ITEMS = [
         "id": "CASE-01617334", "type": "Case", "ref": "01617334",
         "title": "UMS Loses Connection to CC2DCP Constantly",
         "workstream": "UMS Connectivity & Power Cycle", "start": "2026-08-24", "end": "",
-        "status": "In Progress", "role": "Coordinated the physical power-cycle recommendation, operations "
-                                          "communication, onsite support, and the Alvaria interface — "
-                                          "the most significant case in this window",
+        "status": "In Progress", "role": "In DEV. Coordinated the physical power-cycle recommendation, "
+                                          "operations communication, onsite support, and the Alvaria "
+                                          "interface — the most significant case in this window",
         "people": ["Alvaria", "CCS"],
         "evidence": "Case 01617334 / Paola Barreto Betancourt thread", "confirmed": True,
     },

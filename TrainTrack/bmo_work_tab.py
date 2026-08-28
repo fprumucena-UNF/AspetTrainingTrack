@@ -309,41 +309,86 @@ def render_bmo_work_tab() -> None:
         st.info("No items match the current filters.")
         return
 
-    # ---- KPI hero row (4 cards instead of 6 plain metrics) ----
-    total_items = len(fdf)
-    active_now = int(fdf["status"].isin(["Active", "In Progress"]).sum())
-    resolved_pct = round(100 * (fdf["status"] == "Resolved").sum() / total_items) if total_items else 0
-    ws_touched = fdf["workstream"].nunique()
+    # ---- KPI hero row ----
+    # Redesigned 2026-08-28 (executive pass, Fabio's request): the previous
+    # 4 KPIs were "Total items" and "Workstreams touched" — activity-volume
+    # numbers that read fine to Fabio but tell a director skimming this for
+    # 30 seconds nothing about what needs THEIR attention. Two changes:
+    #   1. Recurring meetings no longer count toward any KPI below — they're
+    #      cadence, not delivered work, and were inflating the numbers.
+    #   2. Two of the four cards are now genuinely decision-relevant: how
+    #      many things have been sitting open too long, and how many are
+    #      stuck waiting on the vendor (Alvaria) rather than on Fabio.
+    today_ts = pd.Timestamp(TODAY)
+    work_df = fdf[fdf["type"] != "Meeting"].copy()
+    work_df["days_open"] = work_df.apply(
+        lambda r: (r["end_dt"] - r["start_dt"]).days
+        if r["status"] == "Resolved"
+        else (today_ts - r["start_dt"]).days,
+        axis=1,
+    )
+    ATTENTION_THRESHOLD_DAYS = 7
+    total_work_items = len(work_df)
+    needs_attention_df = work_df[(work_df["status"] != "Resolved") & (work_df["days_open"] > ATTENTION_THRESHOLD_DAYS)]
+    waiting_alvaria_df = work_df[(work_df["status"] != "Resolved") & (work_df["people"].apply(lambda p: "Alvaria" in p))]
+    needs_attention = len(needs_attention_df)
+    waiting_alvaria = len(waiting_alvaria_df)
+    active_now = int(work_df["status"].isin(["Active", "In Progress"]).sum())
+    resolved_pct = round(100 * (work_df["status"] == "Resolved").sum() / total_work_items) if total_work_items else 0
 
     k1, k2, k3, k4 = st.columns(4)
     for col, html in zip(
         [k1, k2, k3, k4],
         [
-            _kpi_card("📦", total_items, "Total items", KPI_GRADIENTS[0]),
-            _kpi_card("🔥", active_now, "Active right now", KPI_GRADIENTS[1]),
+            _kpi_card("🔥", needs_attention, f"Needs attention (>{ATTENTION_THRESHOLD_DAYS}d open)", KPI_GRADIENTS[1]),
+            _kpi_card("🤝", waiting_alvaria, "Waiting on Alvaria", KPI_GRADIENTS[0]),
+            _kpi_card("⏳", active_now, "Active right now", KPI_GRADIENTS[3]),
             _kpi_card("✅", f"{resolved_pct}%", "Resolved", KPI_GRADIENTS[2]),
-            _kpi_card("🕸️", ws_touched, "Workstreams touched", KPI_GRADIENTS[3]),
         ],
     ):
         with col:
             st.markdown(html, unsafe_allow_html=True)
 
-    # ---- headline insight (busiest workstream, called out like an exec deck) ----
-    ws_counts_all = fdf.groupby("workstream").size().sort_values(ascending=False)
-    if not ws_counts_all.empty:
-        top_ws = ws_counts_all.index[0]
-        top_n = int(ws_counts_all.iloc[0])
-        top_share = round(100 * top_n / total_items)
+    # ---- headline insight ----
+    # Replaced "busiest workstream" (interesting to Fabio, not actionable
+    # for a director) with the same attention signal as the KPI row above,
+    # spelled out as a sentence — the one line a director actually needs.
+    if needs_attention > 0:
+        names = ", ".join(needs_attention_df.sort_values("days_open", ascending=False)["title"].head(3))
+        extra = f" Longest-open: {names}." if names else ""
+        # "of those" only counts correctly when it's a true subset of the
+        # needs-attention group — a case could be waiting on Alvaria but
+        # still under the 7-day threshold, so the two counts aren't nested.
+        overlap = len(needs_attention_df[needs_attention_df["people"].apply(lambda p: "Alvaria" in p)])
+        if overlap:
+            alvaria_note = f" {overlap} of those are waiting on Alvaria."
+        elif waiting_alvaria:
+            alvaria_note = f" Separately, {waiting_alvaria} active item(s) are waiting on Alvaria."
+        else:
+            alvaria_note = ""
         st.markdown(
             f"""<div class="bmo-insight">
-                {WORKSTREAM_ICONS.get(top_ws, "🔎")}&nbsp; Busiest area right now:
-                <b>{top_ws}</b> — {top_n} of {total_items} items ({top_share}%).
+                ⚠️&nbsp; <b>{needs_attention} item(s)</b> have been open more than
+                {ATTENTION_THRESHOLD_DAYS} days.{alvaria_note}{extra}
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    else:
+        st.markdown(
+            """<div class="bmo-insight" style="border-left-color:#0F766E; background:#ECFDF5; border-color:#A7F3D0;">
+                ✅&nbsp; Nothing open more than a week right now — no items need escalation.
             </div>""",
             unsafe_allow_html=True,
         )
 
-    tab_overview, tab_connections, tab_detail = st.tabs(
-        ["🚀 Overview", "🕸️ Connections", "📋 Detail Log"]
+    # Reordered 2026-08-28 (executive pass): Detail Log first. It's the one
+    # plain, scannable table in this whole tab — the thing a director opens
+    # this page to actually use — so it shouldn't be buried behind a
+    # narrative timeline and a network graph. Overview (the story, useful in
+    # a 1:1 with Fabio) comes second; Connections (interesting, not
+    # decision-relevant) moves last.
+    tab_detail, tab_overview, tab_connections = st.tabs(
+        ["📋 Detail Log", "🚀 Overview", "🕸️ Connections"]
     )
 
     # ================= TAB 1 — Overview =================
@@ -429,11 +474,11 @@ def render_bmo_work_tab() -> None:
         left, right = st.columns([3, 2])
         with left:
             st.markdown('<div class="bmo-section-title">Where the work concentrated</div>', unsafe_allow_html=True)
-            st.markdown('<div class="bmo-section-sub">Share of items by workstream — biggest first.</div>', unsafe_allow_html=True)
-            counts = fdf.groupby("workstream").size().sort_values(ascending=False)
+            st.markdown('<div class="bmo-section-sub">Share of actual work items by workstream — meetings excluded, biggest first.</div>', unsafe_allow_html=True)
+            counts = work_df.groupby("workstream").size().sort_values(ascending=False)
             max_count = int(counts.max()) if not counts.empty else 1
             for ws, n in counts.items():
-                pct = round(100 * n / total_items)
+                pct = round(100 * n / total_work_items) if total_work_items else 0
                 width_pct = round(100 * n / max_count)
                 color = WORKSTREAMS.get(ws, MUTED)
                 icon = WORKSTREAM_ICONS.get(ws, "🔎")
@@ -476,7 +521,7 @@ def render_bmo_work_tab() -> None:
             )
             st.plotly_chart(fig_ring, width="stretch", config={"displayModeBar": False}, key="bmo_chart_ring")
 
-            status_counts = fdf["status"].value_counts()
+            status_counts = work_df["status"].value_counts()
             chips = "".join(
                 f"""<span class="bmo-legend-chip">
                         <span class="bmo-legend-dot" style="background:{STATUS_COLORS.get(s, MUTED)};"></span>
@@ -609,7 +654,7 @@ def render_bmo_work_tab() -> None:
         else:
             st.info("No named collaborators in the current filter.")
 
-    # ================= TAB 3 — Detail Log =================
+    # ================= TAB — Detail Log =================
     with tab_detail:
         st.markdown('<div class="bmo-section-title">Full detail log</div>', unsafe_allow_html=True)
         search = st.text_input(
@@ -629,9 +674,19 @@ def render_bmo_work_tab() -> None:
             ]
         show_df = show_df.sort_values("start_dt", ascending=False)
         show_df["type_display"] = show_df["type_icon"] + " " + show_df["type"]
+        # "Days Open" — the same aging signal behind the KPI row above, but
+        # per row so a director can see exactly which items are the old
+        # ones, not just the count. Meetings are ongoing by nature, so they
+        # show a dash instead of a (meaningless) day count.
+        show_df["days_open_display"] = show_df.apply(
+            lambda r: "—" if r["type"] == "Meeting"
+            else f"{(r['end_dt'] - r['start_dt']).days}d" if r["status"] == "Resolved"
+            else f"{(today_ts - r['start_dt']).days}d",
+            axis=1,
+        )
         display_cols = {
             "start": "Date", "type_display": "Type", "ref": "Ref", "title": "Title",
-            "workstream": "Workstream", "status_dot": "Status", "role": "Role",
+            "workstream": "Workstream", "status_dot": "Status", "days_open_display": "Days Open", "role": "Role",
             "people_str": "People", "verified": "Verified", "evidence": "Evidence",
         }
         st.dataframe(
