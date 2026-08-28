@@ -1,71 +1,198 @@
 """
 Fabio Prumucena — BMO / Connext Work Portfolio (drop-in section)
 ==================================================================
-Same dashboard as app.py, refactored into ONE function so it can be pasted
-into an existing Streamlit app as a tab/section instead of running as its
-own app.
+Same dashboard data as before, redesigned 2026-08-28 for a more modern,
+"executive/marketing" look — Fabio felt the original was hard to read and
+too plain. This version does two things differently on purpose:
 
-HOW TO INTEGRATE INTO YOUR EXISTING app.py
--------------------------------------------
-1. Copy `bmo_work_tab.py` and `data.py` into the same folder as your app.py.
-2. In your app.py:
+  1. LESS ON SCREEN AT ONCE. The old Overview sub-tab showed 3 charts side
+     by side (timeline + bar + donut). This one leads with one hero chart
+     (the timeline) plus 4 big KPI cards, then a single "workstream pulse"
+     panel replaces the old bar+donut pair — same information, one visual
+     instead of two.
+  2. BOLDER VISUAL LANGUAGE. Custom gradient KPI cards, a vivid saturated
+     palette (from data.py), bigger numbers, and a "headline insight" line
+     that calls out the busiest workstream — the kind of one-glance framing
+     an exec deck uses instead of a dashboard.
+
+Same public function, same integration path as before — nothing in
+trainingtrak.py needs to change:
 
     from bmo_work_tab import render_bmo_work_tab
+    render_bmo_work_tab()
 
-3. Call it wherever you want it to show up. Three common cases:
-
-   A) You already have `st.tabs([...])` in your app — just add one more tab:
-
-        tab_a, tab_b, tab_bmo = st.tabs(["Existing 1", "Existing 2", "📊 My BMO Work"])
-        with tab_bmo:
-            render_bmo_work_tab()
-
-   B) Your app is multipage (a `pages/` folder) — create a new file
-      `pages/BMO_Work.py` with just:
-
-        from bmo_work_tab import render_bmo_work_tab
-        render_bmo_work_tab()
-
-      Streamlit auto-adds it to the sidebar page nav.
-
-   C) You just want it as a section on your existing single page —
-      call it directly, anywhere after your other content:
-
-        render_bmo_work_tab()
+HOW TO INTEGRATE INTO YOUR EXISTING app.py (unchanged from before)
+-------------------------------------------------------------------
+1. Copy `bmo_work_tab.py` and `data.py` into the same folder as your app.py.
+2. In your app.py:  from bmo_work_tab import render_bmo_work_tab
+3. Call it wherever you want it to show up — as one more st.tabs() tab, as
+   its own page in a `pages/` folder, or as a plain section.
 
 Notes:
-- This file does NOT call st.set_page_config() or st.sidebar.header("Filters")
-  at the top level — your existing app already owns those. Filters render in
-  the sidebar under a "📊 My BMO Work" label so they don't clash with yours.
-- All widget keys are prefixed `bmo_` to avoid colliding with widget keys/
-  labels you already use elsewhere in your app.
+- This file does NOT call st.set_page_config() — your existing app already
+  owns that.
+- All widget keys are prefixed `bmo_` and all CSS classes are prefixed
+  `.bmo-` to avoid colliding with anything else in your app.
 """
 
 from datetime import datetime, timedelta
 
+import networkx as nx
 import pandas as pd
-import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from data import JOIN_DATE, STATUS_COLORS, TODAY, WORK_ITEMS, WORKSTREAMS
+from data import (
+    JOIN_DATE, STATUS_COLORS, TODAY, TYPE_EMOJI, WORK_ITEMS, WORKSTREAM_ICONS,
+    WORKSTREAMS,
+)
 
-MUTED = "#898781"
+MUTED = "#9E9E9E"
+
+# ---------------------------------------------------------------------------
+# Vibrant/marketing palette for this tab only. Deliberately its own thing —
+# separate from the BMO navy/blue corporate palette the rest of the app
+# uses — since this tab is the one Fabio asked to feel bolder and more
+# "executive/marketing" than the training tabs.
+# ---------------------------------------------------------------------------
+INK = "#161221"
+HERO_GRADIENT = "linear-gradient(135deg, #1C1533 0%, #3A1C71 55%, #7A2FBF 100%)"
+CARD_BG = "#FFFFFF"
+PAGE_TINT = "#FAF9FE"
+GRID_TINT = "#ECE8F7"
+
+KPI_GRADIENTS = [
+    "linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%)",   # Total items — indigo/violet
+    "linear-gradient(135deg, #FF6A3D 0%, #FF3D6E 100%)",   # Active now — orange/pink (urgency)
+    "linear-gradient(135deg, #00C896 0%, #12A883 100%)",   # Resolved % — teal/green
+    "linear-gradient(135deg, #2F6FED 0%, #6A5CF5 100%)",   # Workstreams touched — blue/indigo
+]
+
+
+def _kpi_card(icon, value, label, gradient):
+    return f"""
+        <div class="bmo-kpi-card" style="background:{gradient};">
+            <div class="bmo-kpi-icon">{icon}</div>
+            <div class="bmo-kpi-value">{value}</div>
+            <div class="bmo-kpi-label">{label}</div>
+        </div>
+    """
 
 
 def render_bmo_work_tab() -> None:
-    """Render the full work-portfolio section (KPIs + 3 sub-tabs) in place."""
+    """Render the full work-portfolio section (hero + 3 sub-tabs) in place."""
 
     st.markdown(
-        """
+        f"""
         <style>
-            div[data-testid="stMetric"] {
-                background: #ffffff;
-                border: 1px solid rgba(11,11,11,0.08);
+            .bmo-hero {{
+                background: {HERO_GRADIENT};
+                border-radius: 20px;
+                padding: 28px 32px 24px 32px;
+                margin-bottom: 18px;
+                box-shadow: 0 12px 30px rgba(58,28,113,0.25);
+            }}
+            .bmo-hero-title {{
+                font-size: 2rem !important;
+                font-weight: 800 !important;
+                color: #FFFFFF !important;
+                margin: 0 !important;
+                letter-spacing: -0.01em;
+            }}
+            .bmo-hero-sub {{
+                font-size: 0.98rem !important;
+                color: rgba(255,255,255,0.78) !important;
+                margin-top: 6px !important;
+            }}
+            .bmo-kpi-card {{
+                border-radius: 16px;
+                padding: 16px 18px 14px 18px;
+                color: #FFFFFF;
+                min-height: 108px;
+                box-shadow: 0 8px 20px rgba(20,10,40,0.18);
+            }}
+            .bmo-kpi-icon {{ font-size: 1.5rem; line-height: 1; }}
+            .bmo-kpi-value {{
+                font-size: 2.15rem; font-weight: 800; line-height: 1.15;
+                margin-top: 8px; letter-spacing: -0.01em;
+            }}
+            .bmo-kpi-label {{
+                font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
+                letter-spacing: 0.06em; opacity: 0.88; margin-top: 3px;
+            }}
+            .bmo-insight {{
+                background: #FFF3EC;
+                border: 1px solid #FFD9C2;
+                border-left: 5px solid #FF6A3D;
                 border-radius: 10px;
-                padding: 14px 16px 8px 16px;
-            }
-            div[data-testid="stMetricValue"] {font-size: 1.6rem;}
+                padding: 10px 16px;
+                font-size: 0.92rem;
+                color: {INK};
+                margin: 4px 0 22px 0;
+            }}
+            .bmo-insight b {{ color: #C2410C; }}
+            .bmo-section-title {{
+                font-size: 1.25rem !important;
+                font-weight: 800 !important;
+                color: {INK} !important;
+                margin: 6px 0 2px 0 !important;
+            }}
+            .bmo-section-sub {{
+                font-size: 0.85rem !important;
+                color: #6B6478 !important;
+                margin-bottom: 10px !important;
+            }}
+            .bmo-ws-row {{
+                display: flex; align-items: center; gap: 14px;
+                background: {CARD_BG}; border-radius: 12px;
+                padding: 10px 16px; margin-bottom: 8px;
+                box-shadow: 0 2px 10px rgba(30,20,60,0.06);
+            }}
+            .bmo-ws-icon {{ font-size: 1.25rem; width: 26px; text-align:center; }}
+            .bmo-ws-name {{ font-weight: 700; color: {INK}; min-width: 240px; font-size: 0.92rem; }}
+            .bmo-ws-track {{ flex: 1; height: 10px; background: {GRID_TINT}; border-radius: 6px; overflow: hidden; }}
+            .bmo-ws-fill {{ height: 100%; border-radius: 6px; }}
+            .bmo-ws-count {{ font-weight: 800; color: {INK}; min-width: 34px; text-align: right; font-size: 0.95rem; }}
+            .bmo-ws-pct {{ font-weight: 600; color: #8A8395; min-width: 44px; text-align: right; font-size: 0.8rem; }}
+            .bmo-ring-caption {{ text-align:center; font-weight:700; color:{INK}; font-size:0.95rem; margin-top:-8px; }}
+            .bmo-tl-wrap {{
+                max-height: 460px; overflow-y: auto;
+                padding: 6px 10px 6px 0; margin-top: 6px;
+            }}
+            .bmo-tl-track {{ position: relative; padding-left: 26px; }}
+            .bmo-tl-track::before {{
+                content: ""; position: absolute; left: 8px; top: 4px; bottom: 4px;
+                width: 2px; background: linear-gradient(180deg, #D9D0F0, #F3F0FB);
+            }}
+            .bmo-tl-node {{ position: relative; margin-bottom: 10px; }}
+            .bmo-tl-dot {{
+                position: absolute; left: -26px; top: 14px; width: 12px; height: 12px;
+                border-radius: 50%; background: #FFFFFF; border: 2px solid currentColor;
+                box-shadow: 0 0 0 3px #FFFFFF;
+            }}
+            .bmo-tl-card {{
+                background: {CARD_BG}; border-radius: 12px; padding: 10px 16px;
+                box-shadow: 0 2px 8px rgba(30,20,60,0.07);
+            }}
+            .bmo-tl-date {{
+                font-size: 0.68rem; font-weight: 800; letter-spacing: 0.05em;
+                text-transform: uppercase; color: #8A8395;
+            }}
+            .bmo-tl-title {{ font-weight: 700; color: {INK}; font-size: 0.94rem; margin: 3px 0 7px 0; }}
+            .bmo-tl-tags {{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }}
+            .bmo-tl-tag {{
+                font-size: 0.7rem; font-weight: 700; padding: 3px 11px; border-radius: 999px;
+                color: #FFFFFF;
+            }}
+            .bmo-tl-status {{ font-size: 0.78rem; font-weight: 600; color: {INK}; }}
+            .bmo-legend-chip {{
+                display:inline-flex; align-items:center; gap:6px;
+                font-size:0.8rem; font-weight:600; color:{INK};
+                background:{CARD_BG}; border-radius:999px; padding:5px 12px;
+                margin:3px 6px 3px 0; box-shadow: 0 1px 6px rgba(30,20,60,0.08);
+            }}
+            .bmo-legend-dot {{ width:9px; height:9px; border-radius:50%; display:inline-block; }}
+            .bmo-unverified {{ color:#C2410C; font-weight:700; font-size:0.78rem; }}
         </style>
         """,
         unsafe_allow_html=True,
@@ -85,6 +212,7 @@ def render_bmo_work_tab() -> None:
         {"Resolved": "🟢", "In Progress": "🟡", "Active": "🟡", "Unknown": "⚪"}
     )
     df["verified"] = df["confirmed"].map({True: "✅", False: "⚠️ unverified"})
+    df["type_icon"] = df["type"].map(TYPE_EMOJI).fillna("")
 
     # ---- sidebar filters (namespaced so they don't clash with your app's own) ----
     st.sidebar.markdown("### 📊 My BMO Work")
@@ -118,102 +246,169 @@ def render_bmo_work_tab() -> None:
         mask &= df["confirmed"]
     fdf = df[mask].copy()
 
-    # ---- header ----
+    # ---- hero header ----
     days_active = (
         datetime.strptime(TODAY, "%Y-%m-%d") - datetime.strptime(JOIN_DATE, "%Y-%m-%d")
     ).days
-    st.header("📊 Fabio Prumucena — Work Portfolio")
-    st.caption(
-        f"BMO · CCS / Alvaria–Aspect Contact Center Infrastructure · allocated via Connext · "
-        f"active since {JOIN_DATE} ({days_active} days)"
+    st.markdown(
+        f"""
+        <div class="bmo-hero">
+            <div class="bmo-hero-title">📊 Fabio Prumucena — Work Portfolio</div>
+            <div class="bmo-hero-sub">
+                BMO · CCS / Alvaria–Aspect Contact Center Infrastructure · allocated via Connext
+                · active since {JOIN_DATE} ({days_active} days)
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
     )
 
-    # ---- KPI row ----
-    k1, k2, k3, k4, k5, k6 = st.columns(6)
-    k1.metric("Total items", len(fdf))
-    k2.metric("Support cases", int((fdf["type"] == "Case").sum()))
-    k3.metric("Incidents", int((fdf["type"] == "Incident").sum()))
-    k4.metric("Initiatives / events", int(fdf["type"].isin(["Initiative", "Event"]).sum()))
-    k5.metric("Workstreams touched", fdf["workstream"].nunique())
-    k6.metric("Recurring meetings", int((fdf["type"] == "Meeting").sum()))
+    if fdf.empty:
+        st.info("No items match the current filters.")
+        return
 
-    st.markdown("")
+    # ---- KPI hero row (4 cards instead of 6 plain metrics) ----
+    total_items = len(fdf)
+    active_now = int(fdf["status"].isin(["Active", "In Progress"]).sum())
+    resolved_pct = round(100 * (fdf["status"] == "Resolved").sum() / total_items) if total_items else 0
+    ws_touched = fdf["workstream"].nunique()
+
+    k1, k2, k3, k4 = st.columns(4)
+    for col, html in zip(
+        [k1, k2, k3, k4],
+        [
+            _kpi_card("📦", total_items, "Total items", KPI_GRADIENTS[0]),
+            _kpi_card("🔥", active_now, "Active right now", KPI_GRADIENTS[1]),
+            _kpi_card("✅", f"{resolved_pct}%", "Resolved", KPI_GRADIENTS[2]),
+            _kpi_card("🕸️", ws_touched, "Workstreams touched", KPI_GRADIENTS[3]),
+        ],
+    ):
+        with col:
+            st.markdown(html, unsafe_allow_html=True)
+
+    # ---- headline insight (busiest workstream, called out like an exec deck) ----
+    ws_counts_all = fdf.groupby("workstream").size().sort_values(ascending=False)
+    if not ws_counts_all.empty:
+        top_ws = ws_counts_all.index[0]
+        top_n = int(ws_counts_all.iloc[0])
+        top_share = round(100 * top_n / total_items)
+        st.markdown(
+            f"""<div class="bmo-insight">
+                {WORKSTREAM_ICONS.get(top_ws, "🔎")}&nbsp; Busiest area right now:
+                <b>{top_ws}</b> — {top_n} of {total_items} items ({top_share}%).
+            </div>""",
+            unsafe_allow_html=True,
+        )
+
     tab_overview, tab_connections, tab_detail = st.tabs(
-        ["📊 Overview", "🕸️ Connections", "📋 Detail Log"]
+        ["🚀 Overview", "🕸️ Connections", "📋 Detail Log"]
     )
 
     # ================= TAB 1 — Overview =================
     with tab_overview:
-        st.subheader("Timeline — how the work unfolded")
-        if fdf.empty:
-            st.info("No items match the current filters.")
-        else:
-            timeline_df = fdf.sort_values("start_dt")
-            fig_tl = px.timeline(
-                timeline_df,
-                x_start="start_dt",
-                x_end="finish_dt",
-                y="workstream",
-                color="workstream",
-                color_discrete_map=WORKSTREAMS,
-                category_orders={"workstream": all_workstreams},
-                hover_name="title",
-                hover_data={
-                    "ref": True, "type": True, "status": True, "role": True,
-                    "people_str": True, "start_dt": False, "end_dt": False,
-                    "finish_dt": False, "workstream": False,
-                },
-                labels={"people_str": "People", "ref": "Ref", "role": "Role"},
+        st.markdown('<div class="bmo-section-title">How the work unfolded</div>', unsafe_allow_html=True)
+        st.markdown('<div class="bmo-section-sub">A running story, oldest to newest — scroll for the full list.</div>', unsafe_allow_html=True)
+
+        # A vertical "milestone" timeline instead of a Gantt chart. Gantt bars
+        # look great when items run for a while, but most items here are
+        # single-day cases/incidents — as bars they render as barely-visible
+        # slivers of very uneven width, which is exactly the "hard to read"
+        # complaint. A chronological card list reads cleanly regardless of
+        # how long an item took, and doubles as a compact activity feed.
+        story_df = fdf.sort_values("start_dt")
+        rows_html = []
+        for _, row in story_df.iterrows():
+            color = WORKSTREAMS.get(row["workstream"], MUTED)
+            date_label = row["start_dt"].strftime("%b %d")
+            if pd.notna(row["end_dt"]) and row["end_dt"] > row["start_dt"]:
+                date_label += f" – {row['end_dt'].strftime('%b %d')}"
+            status_icon = {"Resolved": "🟢", "In Progress": "🟡", "Active": "🟡", "Unknown": "⚪"}.get(row["status"], "⚪")
+            unverified = "" if row["confirmed"] else " <span class='bmo-unverified'>⚠️ unverified</span>"
+            # Built as one continuous line with no line breaks or leading
+            # whitespace on purpose: Streamlit's markdown renderer follows
+            # CommonMark's HTML-block rule, where a blank/whitespace-only
+            # line ends a raw-HTML block. An indented multi-line template
+            # here previously left whitespace-only gaps between cards,
+            # which broke the block after the first card and made every
+            # card after it show up as literal text instead of rendering.
+            tag_label = f"{WORKSTREAM_ICONS.get(row['workstream'], '')} {row['workstream']}"
+            rows_html.append(
+                '<div class="bmo-tl-node">'
+                f'<div class="bmo-tl-dot" style="color:{color};"></div>'
+                '<div class="bmo-tl-card">'
+                f'<div class="bmo-tl-date">{date_label}</div>'
+                f'<div class="bmo-tl-title">{row["type_icon"]} {row["title"]}</div>'
+                '<div class="bmo-tl-tags">'
+                f'<span class="bmo-tl-tag" style="background:{color};">{tag_label}</span>'
+                f'<span class="bmo-tl-status">{status_icon} {row["status"]}</span>{unverified}'
+                '</div></div></div>'
             )
-            fig_tl.update_yaxes(autorange="reversed", title=None)
-            fig_tl.update_xaxes(title=None, gridcolor="#e1e0d9")
-            fig_tl.update_layout(
-                plot_bgcolor="#fcfcfb", paper_bgcolor="#fcfcfb",
-                legend_title_text="Workstream", height=420,
-                margin=dict(l=10, r=10, t=10, b=10),
-                font=dict(color="#0b0b0b"),
-            )
-            st.plotly_chart(fig_tl, width="stretch", key="bmo_chart_timeline")
+        st.markdown(
+            '<div class="bmo-tl-wrap"><div class="bmo-tl-track">' + "".join(rows_html) + "</div></div>",
+            unsafe_allow_html=True,
+        )
+
+        st.markdown("<div style='height:10px;'></div>", unsafe_allow_html=True)
 
         left, right = st.columns([3, 2])
         with left:
-            st.subheader("Where the work concentrated")
-            counts = (
-                fdf.groupby("workstream").size().reindex(all_workstreams).dropna().sort_values()
-            )
-            if not counts.empty:
-                fig_bar = go.Figure(
-                    go.Bar(
-                        x=counts.values, y=counts.index, orientation="h",
-                        marker_color=[WORKSTREAMS[w] for w in counts.index],
-                        text=counts.values, textposition="outside",
-                    )
+            st.markdown('<div class="bmo-section-title">Where the work concentrated</div>', unsafe_allow_html=True)
+            st.markdown('<div class="bmo-section-sub">Share of items by workstream — biggest first.</div>', unsafe_allow_html=True)
+            counts = fdf.groupby("workstream").size().sort_values(ascending=False)
+            max_count = int(counts.max()) if not counts.empty else 1
+            for ws, n in counts.items():
+                pct = round(100 * n / total_items)
+                width_pct = round(100 * n / max_count)
+                color = WORKSTREAMS.get(ws, MUTED)
+                icon = WORKSTREAM_ICONS.get(ws, "🔎")
+                st.markdown(
+                    f"""
+                    <div class="bmo-ws-row">
+                        <div class="bmo-ws-icon">{icon}</div>
+                        <div class="bmo-ws-name">{ws}</div>
+                        <div class="bmo-ws-track">
+                            <div class="bmo-ws-fill" style="width:{width_pct}%; background:{color};"></div>
+                        </div>
+                        <div class="bmo-ws-count">{n}</div>
+                        <div class="bmo-ws-pct">{pct}%</div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True,
                 )
-                fig_bar.update_layout(
-                    plot_bgcolor="#fcfcfb", paper_bgcolor="#fcfcfb",
-                    margin=dict(l=10, r=10, t=10, b=10), height=320,
-                    xaxis=dict(title="Items", gridcolor="#e1e0d9"),
-                    font=dict(color="#0b0b0b"),
-                )
-                st.plotly_chart(fig_bar, width="stretch", key="bmo_chart_bar")
 
         with right:
-            st.subheader("Status mix")
+            st.markdown('<div class="bmo-section-title">Status mix</div>', unsafe_allow_html=True)
+            st.markdown('<div class="bmo-section-sub">Overall completion at a glance.</div>', unsafe_allow_html=True)
+            fig_ring = go.Figure(go.Pie(
+                values=[resolved_pct, 100 - resolved_pct],
+                hole=0.74,
+                sort=False,
+                direction="clockwise",
+                marker=dict(colors=[STATUS_COLORS["Resolved"], GRID_TINT], line=dict(width=0)),
+                textinfo="none",
+                hoverinfo="skip",
+            ))
+            fig_ring.update_layout(
+                height=210, margin=dict(l=10, r=10, t=10, b=10),
+                paper_bgcolor="rgba(0,0,0,0)", showlegend=False,
+                font={"family": "Segoe UI, sans-serif"},
+                annotations=[dict(
+                    text=f"<b style='font-size:30px;color:{INK}'>{resolved_pct}%</b>"
+                         f"<br><span style='font-size:12px;color:#8A8395'>Resolved</span>",
+                    x=0.5, y=0.5, showarrow=False,
+                )],
+            )
+            st.plotly_chart(fig_ring, width="stretch", config={"displayModeBar": False}, key="bmo_chart_ring")
+
             status_counts = fdf["status"].value_counts()
-            if not status_counts.empty:
-                fig_status = go.Figure(
-                    go.Pie(
-                        labels=status_counts.index, values=status_counts.values, hole=0.55,
-                        marker_colors=[STATUS_COLORS.get(s, MUTED) for s in status_counts.index],
-                        sort=False,
-                    )
-                )
-                fig_status.update_layout(
-                    paper_bgcolor="#fcfcfb",
-                    margin=dict(l=10, r=10, t=10, b=10), height=320, showlegend=True,
-                    font=dict(color="#0b0b0b"),
-                )
-                st.plotly_chart(fig_status, width="stretch", key="bmo_chart_status")
+            chips = "".join(
+                f"""<span class="bmo-legend-chip">
+                        <span class="bmo-legend-dot" style="background:{STATUS_COLORS.get(s, MUTED)};"></span>
+                        {s} · {c}
+                    </span>"""
+                for s, c in status_counts.items()
+            )
+            st.markdown(f"<div style='margin-top:10px;'>{chips}</div>", unsafe_allow_html=True)
 
         st.caption(
             "🟢 Resolved · 🟡 Active / In Progress · ⚪ Unknown (edit `data.py` to correct)."
@@ -221,124 +416,118 @@ def render_bmo_work_tab() -> None:
 
     # ================= TAB 2 — Connections =================
     with tab_connections:
-        st.subheader("How it all connects")
-        st.caption(
-            "Fabio → workstream → individual case/incident/initiative → the people involved. "
-            "Hover any node for detail; drag to rearrange."
+        st.markdown('<div class="bmo-section-title">How it all connects</div>', unsafe_allow_html=True)
+        st.markdown(
+            '<div class="bmo-section-sub">Fabio → workstream → individual case/incident/initiative → the people involved. '
+            'Hover any node for detail; drag to rearrange.</div>',
+            unsafe_allow_html=True,
         )
-        if fdf.empty:
-            st.info("No items match the current filters.")
-        else:
-            # Keep the network visualization dependency-free.  The app only
-            # needs nodes, edges, and positions for this Plotly chart.
-            nodes = {"Fabio": {"kind": "center"}}
-            edges = []
-            for ws in sorted(fdf["workstream"].unique()):
-                nodes[ws] = {"kind": "workstream"}
-                edges.append(("Fabio", ws))
-            for _, row in fdf.iterrows():
-                item_label = f"{row['ref'] or row['id']}"
-                nodes[item_label] = {
-                    "kind": "item", "workstream": row["workstream"],
-                    "title": row["title"], "status": row["status"],
-                    "itype": row["type"],
-                }
-                edges.append((row["workstream"], item_label))
-                for person in row["people"]:
-                    if not person:
-                        continue
-                    nodes.setdefault(person, {"kind": "person"})
-                    edges.append((item_label, person))
 
-            # A stable circular layout is sufficient here and avoids requiring
-            # an additional package just to position Plotly nodes.
-            import math
-            pos = {
-                node: (math.cos(2 * math.pi * i / max(len(nodes), 1)),
-                       math.sin(2 * math.pi * i / max(len(nodes), 1)))
-                for i, node in enumerate(nodes)
-            }
-            edge_x, edge_y = [], []
-            for a, b in edges:
-                edge_x += [pos[a][0], pos[b][0], None]
-                edge_y += [pos[a][1], pos[b][1], None]
-            edge_trace = go.Scatter(
-                x=edge_x, y=edge_y, mode="lines",
-                line=dict(width=1, color="#c3c2b7"), hoverinfo="none",
+        G = nx.Graph()
+        G.add_node("Fabio", kind="center")
+        for ws in sorted(fdf["workstream"].unique()):
+            G.add_node(ws, kind="workstream")
+            G.add_edge("Fabio", ws)
+        for _, row in fdf.iterrows():
+            item_label = f"{row['ref'] or row['id']}"
+            G.add_node(
+                item_label, kind="item", workstream=row["workstream"],
+                title=row["title"], status=row["status"], itype=row["type"],
             )
-
-            node_traces = []
-            kind_style = {
-                "center": dict(size=34, color="#0b0b0b", symbol="star"),
-                "workstream": dict(size=26, color=None, symbol="square"),
-                "item": dict(size=14, color=None, symbol="circle"),
-                "person": dict(size=12, color="#c3c2b7", symbol="diamond"),
-            }
-            for kind in ["item", "person", "workstream", "center"]:
-                kind_nodes = [n for n, d in nodes.items() if d.get("kind") == kind]
-                if not kind_nodes:
+            G.add_edge(row["workstream"], item_label)
+            for person in row["people"]:
+                if not person:
                     continue
-                xs = [pos[n][0] for n in kind_nodes]
-                ys = [pos[n][1] for n in kind_nodes]
-                style = kind_style[kind]
-                if kind == "workstream":
-                    colors = [WORKSTREAMS.get(n, MUTED) for n in kind_nodes]
-                elif kind == "item":
-                    colors = [WORKSTREAMS.get(nodes[n].get("workstream"), MUTED) for n in kind_nodes]
-                else:
-                    colors = style["color"]
+                G.add_node(person, kind="person")
+                G.add_edge(item_label, person)
 
-                hover = []
-                for n in kind_nodes:
-                    d = nodes[n]
-                    if kind == "item":
-                        hover.append(
-                            f"<b>{d.get('title')}</b><br>{d.get('itype')} · {n}<br>Status: {d.get('status')}"
-                        )
-                    elif kind == "workstream":
-                        hover.append(f"<b>{n}</b><br>Workstream")
-                    elif kind == "person":
-                        hover.append(f"<b>{n}</b>")
-                    else:
-                        hover.append("Fabio Prumucena")
+        pos = nx.spring_layout(G, seed=7, k=0.6)
+        edge_x, edge_y = [], []
+        for a, b in G.edges():
+            edge_x += [pos[a][0], pos[b][0], None]
+            edge_y += [pos[a][1], pos[b][1], None]
+        edge_trace = go.Scatter(
+            x=edge_x, y=edge_y, mode="lines",
+            line=dict(width=1.2, color="#D9D0F0"), hoverinfo="none",
+            showlegend=False,
+        )
 
-                node_traces.append(
-                    go.Scatter(
-                        x=xs, y=ys,
-                        mode="markers" + ("+text" if kind in ("center", "workstream") else ""),
-                        text=kind_nodes if kind in ("center", "workstream") else None,
-                        textposition="top center",
-                        hovertext=hover, hoverinfo="text",
-                        marker=dict(
-                            size=style["size"], color=colors, symbol=style["symbol"],
-                            line=dict(width=1, color="white"),
-                        ),
-                        name=kind, showlegend=False,
+        node_traces = []
+        kind_style = {
+            "center": dict(size=36, color="#FF3D6E", symbol="star"),
+            "workstream": dict(size=28, color=None, symbol="square"),
+            "item": dict(size=15, color=None, symbol="circle"),
+            "person": dict(size=13, color="#3A1C71", symbol="diamond"),
+        }
+        for kind in ["item", "person", "workstream", "center"]:
+            nodes = [n for n, d in G.nodes(data=True) if d.get("kind") == kind]
+            if not nodes:
+                continue
+            xs = [pos[n][0] for n in nodes]
+            ys = [pos[n][1] for n in nodes]
+            style = kind_style[kind]
+            if kind == "workstream":
+                colors = [WORKSTREAMS.get(n, MUTED) for n in nodes]
+            elif kind == "item":
+                colors = [WORKSTREAMS.get(G.nodes[n].get("workstream"), MUTED) for n in nodes]
+            else:
+                colors = style["color"]
+
+            hover = []
+            for n in nodes:
+                d = G.nodes[n]
+                if kind == "item":
+                    hover.append(
+                        f"<b>{d.get('title')}</b><br>{d.get('itype')} · {n}<br>Status: {d.get('status')}"
                     )
+                elif kind == "workstream":
+                    hover.append(f"<b>{n}</b><br>Workstream")
+                elif kind == "person":
+                    hover.append(f"<b>{n}</b>")
+                else:
+                    hover.append("Fabio Prumucena")
+
+            node_traces.append(
+                go.Scatter(
+                    x=xs, y=ys,
+                    mode="markers" + ("+text" if kind in ("center", "workstream") else ""),
+                    text=nodes if kind in ("center", "workstream") else None,
+                    textposition="top center",
+                    textfont=dict(color=INK, size=11),
+                    hovertext=hover, hoverinfo="text",
+                    marker=dict(
+                        size=style["size"], color=colors, symbol=style["symbol"],
+                        line=dict(width=1.5, color="white"),
+                    ),
+                    name=kind, showlegend=False,
                 )
-
-            fig_net = go.Figure(data=[edge_trace] + node_traces)
-            fig_net.update_layout(
-                plot_bgcolor="#fcfcfb", paper_bgcolor="#fcfcfb",
-                margin=dict(l=10, r=10, t=10, b=10), height=560,
-                xaxis=dict(visible=False), yaxis=dict(visible=False),
-                font=dict(color="#0b0b0b"),
             )
-            st.plotly_chart(fig_net, width="stretch", key="bmo_chart_network")
 
-        st.subheader("Top collaborators")
+        fig_net = go.Figure(data=[edge_trace] + node_traces)
+        fig_net.update_layout(
+            plot_bgcolor=PAGE_TINT, paper_bgcolor=PAGE_TINT,
+            margin=dict(l=10, r=10, t=10, b=10), height=540,
+            xaxis=dict(visible=False), yaxis=dict(visible=False),
+            font=dict(color=INK, family="Segoe UI, sans-serif"),
+            showlegend=False,
+        )
+        st.plotly_chart(fig_net, width="stretch", key="bmo_chart_network")
+
+        st.markdown('<div class="bmo-section-title" style="margin-top:1.2rem;">Top collaborators</div>', unsafe_allow_html=True)
         people_flat = [p for plist in fdf["people"] for p in plist if p]
         if people_flat:
             people_counts = pd.Series(people_flat).value_counts().sort_values()
             fig_people = go.Figure(
-                go.Bar(x=people_counts.values, y=people_counts.index, orientation="h",
-                       marker_color="#2a78d6")
+                go.Bar(
+                    x=people_counts.values, y=people_counts.index, orientation="h",
+                    marker_color="#7C3AED", marker_line_width=0,
+                )
             )
             fig_people.update_layout(
-                plot_bgcolor="#fcfcfb", paper_bgcolor="#fcfcfb",
-                margin=dict(l=10, r=10, t=10, b=10), height=280,
-                xaxis=dict(title="Items together", gridcolor="#e1e0d9"),
-                font=dict(color="#0b0b0b"),
+                plot_bgcolor=PAGE_TINT, paper_bgcolor=PAGE_TINT,
+                margin=dict(l=10, r=10, t=10, b=10), height=260,
+                xaxis=dict(title="Items together", gridcolor=GRID_TINT),
+                font=dict(color=INK, family="Segoe UI, sans-serif"),
             )
             st.plotly_chart(fig_people, width="stretch", key="bmo_chart_people")
         else:
@@ -346,7 +535,7 @@ def render_bmo_work_tab() -> None:
 
     # ================= TAB 3 — Detail Log =================
     with tab_detail:
-        st.subheader("Full detail log")
+        st.markdown('<div class="bmo-section-title">Full detail log</div>', unsafe_allow_html=True)
         search = st.text_input(
             "Search (title, ref, people, evidence)", "", key="bmo_search"
         )
@@ -363,8 +552,9 @@ def render_bmo_work_tab() -> None:
                 )
             ]
         show_df = show_df.sort_values("start_dt", ascending=False)
+        show_df["type_display"] = show_df["type_icon"] + " " + show_df["type"]
         display_cols = {
-            "start": "Date", "type": "Type", "ref": "Ref", "title": "Title",
+            "start": "Date", "type_display": "Type", "ref": "Ref", "title": "Title",
             "workstream": "Workstream", "status_dot": "Status", "role": "Role",
             "people_str": "People", "verified": "Verified", "evidence": "Evidence",
         }

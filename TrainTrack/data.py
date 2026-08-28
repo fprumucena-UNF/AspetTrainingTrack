@@ -22,23 +22,58 @@ Fields:
     people      list  collaborators / counterparts mentioned
     evidence    str   where this came from (email subject / meeting / doc)
     confirmed   bool  False = Copilot flagged this as not fully verified
+
+NAMING NOTE (2026-08-28): "Alvaria", "Alvaria Support", "Alvaria Customer
+Care" and "Aspect" all refer to the same vendor/organization (Aspect
+Software rebranded to Alvaria) — use the single label "Alvaria" for any
+`people` entry that means "the vendor," not a specific named person. A
+named individual who happens to work there (e.g. "Paola Barreto Betancourt
+(Alvaria)") stays as-is — this rule is only about collapsing generic
+vendor-side placeholders so they don't fragment the Top Collaborators /
+Connections views in the My BMO Work tab into near-duplicate entries.
 """
 
 # Fixed categorical palette (dataviz skill default, assigned in order — never cycled)
+# Bumped to a punchier, more saturated version on 2026-08-28 for the "My BMO Work"
+# tab redesign (Fabio asked for a more modern/marketing-forward look on that tab
+# specifically). Same hues/order as before, just brighter — purely cosmetic, does
+# not touch any stored key or the training-curriculum tabs.
 WORKSTREAMS = {
-    "UIP Rollup & Certificates":       "#2a78d6",  # blue
-    "UMS Connectivity & Power Cycle":  "#eb6834",  # orange
-    "UAD / Agent Desktop":             "#1baf7a",  # aqua
-    "Infrastructure Performance":      "#eda100",  # yellow
-    "Logging & PII Compliance":        "#e87ba4",  # magenta
-    "CCS Ops Cadence":                 "#008300",  # green
+    "UIP Rollup & Certificates":       "#2F6FED",  # blue
+    "UMS Connectivity & Power Cycle":  "#FF6A3D",  # orange
+    "UAD / Agent Desktop":             "#12C48B",  # aqua/teal
+    "Infrastructure Performance":      "#FFC53D",  # yellow
+    "Logging & PII Compliance":        "#FF4D8D",  # magenta/pink
+    "CCS Ops Cadence":                 "#22B14C",  # green
+}
+
+# One emoji per workstream, same keys/order as WORKSTREAMS — used only by the
+# "My BMO Work" tab's KPI/pulse cards for quick visual scanning. Purely
+# decorative; add an entry here if you add a new workstream key above.
+WORKSTREAM_ICONS = {
+    "UIP Rollup & Certificates":       "🔐",
+    "UMS Connectivity & Power Cycle":  "⚡",
+    "UAD / Agent Desktop":             "🖥️",
+    "Infrastructure Performance":      "🛠️",
+    "Logging & PII Compliance":        "🔏",
+    "CCS Ops Cadence":                 "🔁",
 }
 
 STATUS_COLORS = {
-    "Resolved":    "#0ca30c",
-    "In Progress": "#fab219",
-    "Active":      "#fab219",
-    "Unknown":     "#898781",
+    "Resolved":    "#00C853",
+    "In Progress": "#FF9800",
+    "Active":      "#FF9800",
+    "Unknown":     "#9E9E9E",
+}
+
+# One emoji per work-item type — used only by the "My BMO Work" tab's Detail
+# Log for quick visual scanning. Purely decorative.
+TYPE_EMOJI = {
+    "Case":       "📁",
+    "Incident":   "🚨",
+    "Initiative": "🚀",
+    "Event":      "📅",
+    "Meeting":    "🔁",
 }
 
 TYPE_SYMBOLS = {
@@ -112,7 +147,7 @@ WORK_ITEMS = [
         "title": "URM — Certificate Validation Errors",
         "workstream": "UIP Rollup & Certificates", "start": "2026-08-04", "end": "2026-08-07",
         "status": "Active", "role": "Received and tracked the full case thread; assessed operational impact",
-        "people": ["Parra, Yeffer", "Alvaria Customer Care"],
+        "people": ["Parra, Yeffer", "Alvaria"],
         "evidence": "FW: Customer Care | Case 01607749", "confirmed": True,
     },
     {
@@ -135,7 +170,7 @@ WORK_ITEMS = [
         "title": "Requesting Aspect to Run Rollup 7.4 SP2 on Dev Environment",
         "workstream": "UIP Rollup & Certificates", "start": "2026-08-17", "end": "",
         "status": "Active", "role": "Opened and owns the case as primary contact",
-        "people": ["Alvaria Support"], "evidence": "Support Case 01615360", "confirmed": True,
+        "people": ["Alvaria"], "evidence": "Support Case 01615360", "confirmed": True,
     },
     {
         "id": "CASE-01616878", "type": "Case", "ref": "01616878",
@@ -143,7 +178,7 @@ WORK_ITEMS = [
         "workstream": "UIP Rollup & Certificates", "start": "2026-08-18", "end": "2026-08-18",
         "status": "Resolved", "role": "Authored the technical inquiry; got confirmation the isolated install "
                                        "isn't supported — recommended the full Rollup",
-        "people": ["Alvaria Support"], "evidence": "Support Case 01616878", "confirmed": True,
+        "people": ["Alvaria"], "evidence": "Support Case 01616878", "confirmed": True,
     },
 
     # ---- Infrastructure Performance ----
@@ -151,7 +186,7 @@ WORK_ITEMS = [
         "id": "INC-9494962", "type": "Incident", "ref": "INC9494962",
         "title": "RDP Access to Support PC (Server Configurator Screenshot)",
         "workstream": "Infrastructure Performance", "start": "2026-08-17", "end": "2026-08-17",
-        "status": "Resolved", "role": "Opened the incident to get RDP access", "people": ["Alvaria Support"],
+        "status": "Resolved", "role": "Opened the incident to get RDP access", "people": ["Alvaria"],
         "evidence": "Incident INC9494962", "confirmed": True,
     },
     {
@@ -160,7 +195,7 @@ WORK_ITEMS = [
         "workstream": "Infrastructure Performance", "start": "2026-08-18", "end": "",
         "status": "Active", "role": "Primary contact; received and is acting on Alvaria's recommendation to "
                                      "upgrade 2 vCPU → 4 vCPU",
-        "people": ["Alvaria Support"], "evidence": "Support Case 01616122", "confirmed": True,
+        "people": ["Alvaria"], "evidence": "Support Case 01616122", "confirmed": True,
     },
     {
         "id": "CASE-01618600", "type": "Case", "ref": "01618600",
@@ -168,7 +203,7 @@ WORK_ITEMS = [
         "workstream": "Infrastructure Performance", "start": "2026-08-27", "end": "2026-08-27",
         "status": "Resolved", "role": "Opened the case and diagnosed root cause (large files were SAP BOE/CMS, "
                                        "likely unrelated to the Aspect ALM)",
-        "people": ["Alvaria Support"], "evidence": "Alvaria Folks", "confirmed": True,
+        "people": ["Alvaria"], "evidence": "Alvaria Folks", "confirmed": True,
     },
 
     # ---- UMS Connectivity & Power Cycle ----
@@ -205,7 +240,7 @@ WORK_ITEMS = [
         "workstream": "Logging & PII Compliance", "start": "2026-08-24", "end": "2026-08-25",
         "status": "In Progress", "role": "Opened the case; reviewing log level vs. retention/size trade-offs "
                                           "with Alvaria engineering — status moved to Technical Support Resolving",
-        "people": ["Alvaria Support"], "evidence": "New Case: 01617931 / Support Case Updated: 01617931",
+        "people": ["Alvaria"], "evidence": "New Case: 01617931 / Support Case Updated: 01617931",
         "confirmed": True,
     },
     {
