@@ -134,8 +134,11 @@ WORK_ITEMS = [
     {
         "id": "MTG-04", "type": "Meeting", "ref": "", "title": "P&V Prod Changes — Review & Discussion",
         "workstream": "CCS Ops Cadence", "start": "2026-07-14", "end": TODAY,
-        "status": "Active", "role": "Reviews production changes ahead of implementation",
-        "people": ["CCS"], "evidence": "P & V Prod Changes - review and discussion (recurring)",
+        "status": "Active",
+        "role": "Reviews production changes ahead of implementation. Currently actively working UMS "
+                "update prep through this forum — progressing from the smaller/lower environments up "
+                "through production, targeted for Sep 6",
+        "people": ["CCS", "Alvaria"], "evidence": "P & V Prod Changes - review and discussion (recurring)",
         "confirmed": True,
     },
     {
@@ -150,16 +153,20 @@ WORK_ITEMS = [
     {
         "id": "INIT-UADGW", "type": "Initiative", "ref": "", "title": "UAD GW Login Fail — Investigation",
         "workstream": "UAD / Agent Desktop", "start": "2026-07-24", "end": "2026-07-24",
-        "status": "Resolved", "role": "Led technical investigation: analyzed CC2DCP, Prophecy, UMS, Teams; "
-                                       "built hypotheses (DTMF, SBC, Direct Routing, Station ID) and a "
-                                       "troubleshooting/validation plan",
+        "status": "Resolved", "role": "In QA. Led technical investigation: analyzed CC2DCP, Prophecy, UMS, "
+                                       "Teams; built hypotheses (DTMF, SBC, Direct Routing, Station ID) and "
+                                       "a troubleshooting/validation plan. Diagnosed and confirmed root "
+                                       "cause: an SBC certificate problem",
         "people": ["CCS"], "evidence": "Fw: UAD GW FAIL", "confirmed": True,
     },
     {
         "id": "INC-9540244", "type": "Incident", "ref": "INC9540244", "title": "UAD Notify / Desktop Support Escalation",
         "workstream": "UAD / Agent Desktop", "start": TODAY, "end": "",
-        "status": "Unknown", "role": "Referenced in Teams — detail not yet confirmed",
-        "people": [], "evidence": "Referenced in Teams (unconfirmed)", "confirmed": False,
+        "status": "In Progress",
+        "role": "Triaged and escalated to the installation team — root cause was a new machine with "
+                "installation issues in the Aspect apps. Recurring pattern: new machines consistently "
+                "arrive with problems in the Aspect app installation",
+        "people": ["CCS"], "evidence": "Handled directly, escalated to installation team", "confirmed": True,
     },
 
     # ---- UIP Rollup & Certificates ----
@@ -218,9 +225,11 @@ WORK_ITEMS = [
     {
         "id": "CASE-01618600", "type": "Case", "ref": "01618600",
         "title": "Disk Space Alert — alm-ocbqwboe001",
-        "workstream": "Infrastructure Performance", "start": "2026-08-27", "end": "2026-08-27",
-        "status": "Resolved", "role": "Opened the case and diagnosed root cause (large files were SAP BOE/CMS, "
-                                       "likely unrelated to the Aspect ALM)",
+        "workstream": "Infrastructure Performance", "start": "2026-08-27", "end": "2026-08-28",
+        "status": "In Progress",
+        "role": "In QA. Opened the case and diagnosed root cause (large files were SAP BOE/CMS, likely "
+                "unrelated to the Aspect ALM) — a useful lesson learned about the ALM server's structure. "
+                "To be closed tomorrow by Alvaria via a screen-sharing session to free up space",
         "people": ["Alvaria"], "evidence": "Alvaria Folks", "confirmed": True,
     },
 
@@ -236,10 +245,15 @@ WORK_ITEMS = [
         "evidence": "Case 01617334 / Paola Barreto Betancourt thread", "confirmed": True,
     },
     {
+        # Corrected 2026-08-28 — this had been logged as already executed,
+        # but Fabio flagged that's not actually true yet: still scheduling
+        # a date for onsite staff to physically power the appliance back on.
         "id": "EVT-POWERCYCLE", "type": "Event", "ref": "",
-        "title": "Power Cycle Executed — UIP-BCCBDVUMS01 (10.197.20.16)",
-        "workstream": "UMS Connectivity & Power Cycle", "start": "2026-08-25", "end": "2026-08-25",
-        "status": "Resolved", "role": "Coordinated the shutdown and onsite physical restart of the appliance",
+        "title": "Power Cycle — UIP-BCCBDVUMS01 (10.197.20.16)",
+        "workstream": "UMS Connectivity & Power Cycle", "start": "2026-08-25", "end": "",
+        "status": "Active",
+        "role": "Coordinating the onsite physical restart of the appliance — still scheduling a date "
+                "for onsite staff to be on-site to power it back on; not yet executed",
         "people": ["Onsite/NOC support"], "evidence": "RE: POWER CYCLE UIP-BCCBDVUMS01", "confirmed": True,
     },
     {
@@ -259,11 +273,12 @@ WORK_ITEMS = [
         # exercise rather than two disconnected entries.
         "id": "INIT-PII-EXERCISE", "type": "Initiative", "ref": "01617931 / CHG1107075 / CTASK2148271",
         "title": "PII Unmasked Data Exercise",
-        "workstream": "Logging & PII Compliance", "start": "2026-08-24", "end": "2026-08-27",
+        "workstream": "Logging & PII Compliance", "start": "2026-08-24", "end": "",
         "status": "Active",
         "role": "Opened the case reviewing log level vs. retention/size trade-offs with Alvaria "
                 "engineering; that work fed into the delivery letter covering Alvaria/Aspect lowering "
-                "logging levels to minimize PII data exposure",
+                "logging levels to minimize PII data exposure. Non-production environments on track to "
+                "wrap up by Sep 1; production is the next phase",
         "people": ["Alvaria"],
         "evidence": "New Case: 01617931 / Support Case Updated: 01617931; "
                     "Delivery Letter: Aspect Lowering Logging Levels to Minimize PII Data",

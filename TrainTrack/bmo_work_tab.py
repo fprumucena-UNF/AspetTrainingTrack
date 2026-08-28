@@ -60,6 +60,7 @@ HERO_GRADIENT = "linear-gradient(135deg, #1C1533 0%, #3A1C71 55%, #7A2FBF 100%)"
 CARD_BG = "#FFFFFF"
 PAGE_TINT = "#FAF9FE"
 GRID_TINT = "#ECE8F7"
+ICE_WHITE = "#EAF2FF"  # soft ice-white for text on the KPI cards' dark gradients — less stark than pure #FFF
 
 # Deepened 2026-08-28 — the first version used bright mid-tone gradients
 # (e.g. orange→pink, teal→green) that looked bold but left white text at
@@ -125,7 +126,7 @@ def render_bmo_work_tab() -> None:
             .bmo-kpi-card {{
                 border-radius: 16px;
                 padding: 16px 18px 14px 18px;
-                color: #FFFFFF;
+                color: {ICE_WHITE};
                 min-height: 108px;
                 box-shadow: 0 8px 20px rgba(20,10,40,0.18);
             }}
