@@ -126,20 +126,33 @@ def render_bmo_work_tab() -> None:
             .bmo-kpi-card {{
                 border-radius: 16px;
                 padding: 16px 18px 14px 18px;
-                color: {ICE_WHITE};
+                color: {ICE_WHITE} !important;
                 min-height: 108px;
                 box-shadow: 0 8px 20px rgba(20,10,40,0.18);
             }}
-            .bmo-kpi-icon {{ font-size: 1.5rem; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.25); }}
+            /* !important on each child too, not just the card: the host app
+               (trainingtrak.py) sets a blanket dark-text rule on every div,
+               span, p and label for its own dark-on-light design. A rule
+               that matches an element directly always beats one inherited
+               from a parent, no matter which is more specific or which was
+               declared later -- so without !important here, every one of
+               these divs/spans came out dark instead of inheriting the
+               card's ice-white. */
+            .bmo-kpi-icon {{
+                font-size: 1.5rem; line-height: 1; text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+                color: {ICE_WHITE} !important;
+            }}
             .bmo-kpi-value {{
                 font-size: 2.15rem; font-weight: 800; line-height: 1.15;
                 margin-top: 8px; letter-spacing: -0.01em;
                 text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+                color: {ICE_WHITE} !important;
             }}
             .bmo-kpi-label {{
                 font-size: 0.72rem; font-weight: 700; text-transform: uppercase;
                 letter-spacing: 0.06em; opacity: 0.95; margin-top: 3px;
                 text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+                color: {ICE_WHITE} !important;
             }}
             .bmo-insight {{
                 background: #FFF3EC;
