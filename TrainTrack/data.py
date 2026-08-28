@@ -23,20 +23,25 @@ Fields:
     evidence    str   where this came from (email subject / meeting / doc)
     confirmed   bool  False = Copilot flagged this as not fully verified
 
-NAMING NOTE (2026-08-28, revised same day): "Alvaria", "Alvaria Support",
-"Alvaria Customer Care" and "Aspect" all refer to the same vendor/
-organization (Aspect Software rebranded to Alvaria). Use the single label
-"Alvaria" for EVERY `people` entry on the vendor side — including named
-individuals there (e.g. Paola Barreto Betancourt, Carlos Estrada, Pedro
-Gonzales, Candido Ortiz, or anyone else at Aspect/Alvaria). Fabio's call:
-for this dashboard, the vendor relationship is what matters, not which
-specific person at Alvaria was on the thread — so don't add a new named
-person there even if a future item names one; fold them into "Alvaria"
-too. (An earlier version of this note said named individuals should stay
-separate — that's superseded.) This only applies to the vendor side: BMO/
-Connext colleagues (Parra Yeffer, Freed Mike, etc.) are unaffected and
-keep their real names, since those distinctions are the ones that matter
-here.
+NAMING NOTE (2026-08-28, revised twice same day): every `people` entry
+collapses to one of two labels — "Alvaria" for the vendor side, "CCS" for
+the internal BMO/Connext side. Neither side tracks named individuals here
+anymore:
+  - Vendor side -> "Alvaria": covers "Alvaria Support", "Alvaria Customer
+    Care", "Aspect" (Aspect Software rebranded to Alvaria), and any named
+    person there (Paola Barreto Betancourt, Carlos Estrada, Pedro
+    Gonzales, Candido Ortiz, or anyone else at Aspect/Alvaria).
+  - Internal side -> "CCS": covers "CCS team" and named BMO/Connext
+    colleagues (Parra Yeffer, Freed Mike, Patel Dharmendrakumar, Ali, or
+    anyone else on the internal team).
+Fabio's call: for this dashboard, which *organization* was on the thread
+is what matters, not which specific person — so don't add a new named
+individual on either side even if a future item names one; fold them into
+"Alvaria" or "CCS" instead. (Two earlier versions of this note drew the
+line differently — first keeping named individuals separate, then keeping
+just the internal side separate — both superseded.) "Onsite/NOC support"
+is left as its own label since it's a distinct function, not an
+individual, and nobody's asked to fold it into "CCS" yet.
 
 MERGE NOTE (2026-08-28): three pairs of items that told one continuous
 story were combined into a single entry, at Fabio's request, so the
@@ -109,35 +114,35 @@ WORK_ITEMS = [
         "id": "MTG-01", "type": "Meeting", "ref": "", "title": "CCS Morning Meeting",
         "workstream": "CCS Ops Cadence", "start": JOIN_DATE, "end": TODAY,
         "status": "Active", "role": "Daily participant — brought on to cover CCS during a teammate's absence",
-        "people": ["CCS team"], "evidence": "CCS Morning Meeting *New Invite* (recurring)",
+        "people": ["CCS"], "evidence": "CCS Morning Meeting *New Invite* (recurring)",
         "confirmed": True,
     },
     {
         "id": "MTG-02", "type": "Meeting", "ref": "", "title": "Weekly CCS Deck Update Mtg",
         "workstream": "CCS Ops Cadence", "start": "2026-07-14", "end": TODAY,
         "status": "Active", "role": "Recurring contributor to the CCS status deck",
-        "people": ["Parra, Yeffer", "Patel, Dharmendrakumar", "Freed, Mike"],
+        "people": ["CCS"],
         "evidence": "Weekly CCS Deck Update Mtg (recurring)", "confirmed": True,
     },
     {
         "id": "MTG-03", "type": "Meeting", "ref": "", "title": "Discuss Incidents & Problems",
         "workstream": "CCS Ops Cadence", "start": "2026-07-14", "end": TODAY,
         "status": "Active", "role": "Operational review — incident & problem analysis",
-        "people": ["CCS team"], "evidence": "Discuss Incidents & Problems (recurring)",
+        "people": ["CCS"], "evidence": "Discuss Incidents & Problems (recurring)",
         "confirmed": True,
     },
     {
         "id": "MTG-04", "type": "Meeting", "ref": "", "title": "P&V Prod Changes — Review & Discussion",
         "workstream": "CCS Ops Cadence", "start": "2026-07-14", "end": TODAY,
         "status": "Active", "role": "Reviews production changes ahead of implementation",
-        "people": ["CCS team"], "evidence": "P & V Prod Changes - review and discussion (recurring)",
+        "people": ["CCS"], "evidence": "P & V Prod Changes - review and discussion (recurring)",
         "confirmed": True,
     },
     {
         "id": "MTG-05", "type": "Meeting", "ref": "", "title": "CCS Dev & SD Leaders' Meeting (Weekly Update to Ali)",
         "workstream": "CCS Ops Cadence", "start": "2026-07-14", "end": TODAY,
         "status": "Active", "role": "Weekly leadership update forum",
-        "people": ["Ali (leadership)"], "evidence": "CCS Dev & SD Leaders' Meeting - Weekly Update to Ali (recurring)",
+        "people": ["CCS"], "evidence": "CCS Dev & SD Leaders' Meeting - Weekly Update to Ali (recurring)",
         "confirmed": True,
     },
 
@@ -148,7 +153,7 @@ WORK_ITEMS = [
         "status": "Resolved", "role": "Led technical investigation: analyzed CC2DCP, Prophecy, UMS, Teams; "
                                        "built hypotheses (DTMF, SBC, Direct Routing, Station ID) and a "
                                        "troubleshooting/validation plan",
-        "people": ["CCS team"], "evidence": "Fw: UAD GW FAIL", "confirmed": True,
+        "people": ["CCS"], "evidence": "Fw: UAD GW FAIL", "confirmed": True,
     },
     {
         "id": "INC-9540244", "type": "Incident", "ref": "INC9540244", "title": "UAD Notify / Desktop Support Escalation",
@@ -170,7 +175,7 @@ WORK_ITEMS = [
                 "impact; later authored a follow-up technical inquiry on isolated install vs. full "
                 "Rollup and got confirmation the isolated install isn't supported — recommended the "
                 "full Rollup",
-        "people": ["Parra, Yeffer", "Alvaria"],
+        "people": ["CCS", "Alvaria"],
         "evidence": "FW: Customer Care | Case 01607749; Support Case 01616878", "confirmed": True,
     },
     {
@@ -183,7 +188,7 @@ WORK_ITEMS = [
         "status": "Resolved",
         "role": "Assessed TLS 1.3, JRE17 client, Hotfix Utility, and thick-client impact; sent findings "
                 "to Freed, Mike. Also reviewed the official Alvaria release notes ahead of deployment",
-        "people": ["Freed, Mike", "Alvaria"],
+        "people": ["CCS", "Alvaria"],
         "evidence": "FW: uip; UIP 7.4SP2 July 2026 Roll Up - ACC Release Notes", "confirmed": True,
     },
     {
@@ -227,7 +232,7 @@ WORK_ITEMS = [
         "status": "In Progress", "role": "Coordinated the physical power-cycle recommendation, operations "
                                           "communication, onsite support, and the Alvaria interface — "
                                           "the most significant case in this window",
-        "people": ["Alvaria", "Parra, Yeffer", "Freed, Mike"],
+        "people": ["Alvaria", "CCS"],
         "evidence": "Case 01617334 / Paola Barreto Betancourt thread", "confirmed": True,
     },
     {
@@ -243,7 +248,7 @@ WORK_ITEMS = [
         "workstream": "UMS Connectivity & Power Cycle", "start": "2026-08-25", "end": "2026-08-25",
         "status": "Resolved", "role": "Aligned on the official power-cycle process, onsite requirements, and "
                                        "BCC/NOC location",
-        "people": ["Parra, Yeffer", "Freed, Mike"], "evidence": "Alvaria Folks (Teams)", "confirmed": True,
+        "people": ["CCS"], "evidence": "Alvaria Folks (Teams)", "confirmed": True,
     },
 
     # ---- Logging & PII Compliance ----
